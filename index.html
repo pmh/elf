@@ -87,7 +87,7 @@ The first thing you should do is to require elf, so enter this into <code>calcul
 </pre></div>
 
 <p>Now from a command line execute <code>node calculator.js</code> and you should se a list of tokens.
-Our lexer has one glaring issue though, try adding spaces in the input string (eg. "1 + 2 * 3") and run it again. You will know see the same token list as before but with the addition of 'error' tokens everywhere a space was found. Lets fix that, add the following line to the lexer:</p>
+Our lexer has one glaring issue though, try adding spaces in the input string (eg. "1 + 2 * 3") and run it again. You will now see the same token list as before but with the addition of 'error' tokens everywhere a space was found. Let's fix that, add the following line to the lexer:</p>
 
 <div class="highlight"><pre><span class="kd">var</span> <span class="nx">CalcLexer</span> <span class="o">=</span> <span class="nx">elf</span><span class="p">.</span><span class="nx">Lexer</span><span class="p">.</span><span class="nx">clone</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
   <span class="err">…</span>
