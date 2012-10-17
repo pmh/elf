@@ -38,7 +38,7 @@ The next thing we will need to do is a lexer that can recognize numbers, operato
 	
 	var CalcLexer = elf.Lexer.clone(function () {
 		this.number(/\d+/)
-		this.operator(/\+|\-|\*|\//")
+		this.operator(/\+|\-|\*|\//)
 	})
 
 `number` and `operator` are convenience methods implemented on top of the lower-level rule method so we could have implemented this more verbosely with `this.rule("number", /\d+/, this.helpers.number, "literal")`. Besides `number` and `operator` you can also use `name`, `string`, `regex`, `eol` and `skip`.
