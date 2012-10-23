@@ -121,14 +121,29 @@ To use the parser we invoke it's <code>parse</code> method passing in the source
 <p>However, since this is such a simple language it would be nice to just get the result of evaluating the input rather than an AST so let's do it:</p>
 
 <pre><code>var CalcEvaluator = elf.Parser.clone(function () {
-  this.prefix("(literal)", function (token) { return token.value; })
+  this.prefix("(literal)", function (token) {
+    return token.value;
+  })
 
-  this.prefix("-", function () { return -this.expression(70) })
+  this.prefix("-", function () {
+    return -this.expression(70)
+  })
 
-  this.infix("+", 10, function (token, left) { return left + this.expression(); })
-  this.infix("-", 10, function (token, left) { return left - this.expression(); })
-  this.infix("*", 20, function (token, left) { return left * this.expression(); })
-  this.infix("/", 20, function (token, left) { return left / this.expression(); })
+  this.infix("+", 10, function (token, left) {
+    return left + this.expression();
+  })
+
+  this.infix("-", 10, function (token, left) {
+    return left - this.expression();
+  })
+
+  this.infix("*", 20, function (token, left) {
+    return left * this.expression();
+  })
+
+  this.infix("/", 20, function (token, left) {
+    return left / this.expression();
+  })
 });
 
 console.log(CalcEvaluator.parse("1 + 2 * -3", CalcLexer)) //=&gt; -5
@@ -164,7 +179,7 @@ CalcWalker = elf.Walker.clone(function () {
   });
 
   // Match and optimize binary * when the right node is 2 by transforming 
-      // it into a left shift
+  // it into a left shift
   this.match ("*", [ _ , 2 ], function (node, left, right) {
     return this.walk(left) &lt;&lt; 1;
   });
