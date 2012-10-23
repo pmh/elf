@@ -55,4 +55,4 @@ CalcWalker = elf.Walker.clone(function () {
 
 var ast = CalcParser.parse("1 + 2 * -3", CalcLexer);
 var res = CalcWalker.walk(ast);
-console.log(res) //=> [ 3, 16 ]
+console.log(res) //=> -5
