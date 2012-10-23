@@ -43,9 +43,9 @@ describe ("Parser", function () {
 
   describe ("stmt", function () {
     beforeEach(function () {
-      parser.stmt("return", function (parser) {
-        this.first = parser.expression(70);
-        return this;
+      parser.stmt("return", function (token) {
+        token.first = this.expression(70);
+        return token;
       })
     });
     
@@ -68,15 +68,16 @@ describe ("Parser", function () {
       elf.sexp(parser.parse("x + y", lexer)).should.eql("(+ x y)");
     });
 
-    it ("can parse multiple expressions", function () {
+    it ("can parse complex expressions", function () {
       parser.infix("+", 10)
       elf.sexp(parser.parse("x + y + z", lexer)).should.eql("(+ (+ x y) z)");
     });
 
-    it ("can parse multiline expressions", function () {
+    it ("can parse multiple expressions", function () {
       parser.infix("+", 10)
       lexer.eol(";")
-      elf.sexp(parser.parse("x + y ; z + 21", lexer)).should.eql("[(+ x y), (+ z 21)]");
+      elf.sexp(parser.parse("x + y ; z + 21" , lexer)).should.eql("[(+ x y), (+ z 21)]");
+      elf.sexp(parser.parse("x + y ; z + 21;", lexer)).should.eql("[(+ x y), (+ z 21)]");
     });
 
     it ("gracefully recovers from parse errors", function () {
