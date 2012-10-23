@@ -43,13 +43,13 @@ It currently implements abstractions for creating parsers and lexers with automa
 
 <p><code>extend</code> copies all the properties from one or more objects to the receiver (works with both parsers and lexers)</p>
 
-<div class="highlight"><pre><span class="nx">myParser</span><span class="p">.</span><span class="nx">extend</span><span class="p">(</span><span class="nx">mySecondParser</span><span class="p">,</span> <span class="nx">myThirdParser</span><span class="p">);</span>
-</pre></div>
+<pre><code>myParser.extend(mySecondParser, myThirdParser);
+</code></pre>
 
 <p><code>borrow</code> let's you reuse specific rules from another parser (only works with parsers for now)</p>
 
-<div class="highlight"><pre><span class="nx">myParser</span><span class="p">.</span><span class="nx">borrow</span><span class="p">(</span><span class="nx">myOtherParser</span><span class="p">,</span> <span class="s2">"+"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">);</span>
-</pre></div>
+<pre><code>myParser.borrow(myOtherParser, "+", "-");
+</code></pre>
 
 <h2>Installation</h2>
 
@@ -66,75 +66,124 @@ It currently implements abstractions for creating parsers and lexers with automa
 <h2>Calculator</h2>
 
 <p>To help you understand the basics of elf let's use it to implement a simple calculator language so create a file called <code>calculator.js</code>.
-The first thing you should do is to require elf, so enter this into <code>calculator.js</code>:</p>
+The first thing you need to do is to require elf, so enter this into <code>calculator.js</code>:</p>
 
-<div class="highlight"><pre><span class="kd">var</span> <span class="nx">elf</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s2">"elf"</span><span class="p">)</span>
-</pre></div>
+<pre><code>var elf = require("elf")
+</code></pre>
 
-<p>The next thing we will need to do is a lexer that can recognize numbers, operators (such as +, -, *, /), here's how that could be implemented:</p>
+<p>The next thing we will need is a lexer that can recognize numbers and operators (such as +, -, *, /), here's how that could be implemented:</p>
 
-<div class="highlight"><pre><span class="kd">var</span> <span class="nx">CalcLexer</span> <span class="o">=</span> <span class="nx">elf</span><span class="p">.</span><span class="nx">Lexer</span><span class="p">.</span><span class="nx">clone</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">number</span><span class="p">(</span><span class="sr">/\d+/</span><span class="p">)</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">operator</span><span class="p">(</span><span class="sr">/\+|\-|\*|\//</span><span class="p">)</span>
-<span class="p">})</span>
-</pre></div>
+<pre><code>var CalcLexer = elf.Lexer.clone(function () {
+    this.number(/\d+/)
+    this.operator(/\+|\-|\*|\//)
+})
+</code></pre>
 
-<p><code>number</code> and <code>operator</code> are convenience methods implemented on top of the lower-level rule method so we could have implemented this more verbosely with <code>this.rule("number", /\d+/, this.helpers.number, "literal")</code>. Besides <code>number</code> and <code>operator</code> you can also use <code>name</code>, <code>string</code>, <code>regex</code>, <code>eol</code> and <code>skip</code>.</p>
+<p><code>number</code> and <code>operator</code> are convenience methods implemented on top of the lower-level <code>rule</code> method so we could have implemented this more verbosely with <code>this.rule("number", /\d+/, this.helpers.number, "literal")</code>. Besides <code>number</code> and <code>operator</code> you can also use <code>name</code>, <code>string</code>, <code>regex</code>, <code>eol</code> and <code>skip</code>.</p>
 
 <p>So now that we have our lexer, let's try it out but first add the following line just under the lexer:</p>
 
-<div class="highlight"><pre><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">CalcLexer</span><span class="p">.</span><span class="nx">lex</span><span class="p">(</span><span class="s2">"1+2*-3"</span><span class="p">))</span> <span class="c1">//=&gt; […tokens…]</span>
-</pre></div>
+<pre><code>console.log(CalcLexer.lex("1+2*-3")) //=&gt; […tokens…]
+</code></pre>
 
 <p>Now from a command line execute <code>node calculator.js</code> and you should se a list of tokens.
-Our lexer has one glaring issue though, try adding spaces in the input string (eg. "1 + 2 * 3") and run it again. You will now see the same token list as before but with the addition of 'error' tokens everywhere a space was found. Let's fix that, add the following line to the lexer:</p>
+There's currently a problem with our lexer however, try adding spaces in the input string (eg. "1 + 2 * 3") and run it again. You will know see the same token list as before but with the addition of 'error' tokens everywhere a space was found. We can fix that by adding the following line to the lexer:</p>
 
-<div class="highlight"><pre><span class="kd">var</span> <span class="nx">CalcLexer</span> <span class="o">=</span> <span class="nx">elf</span><span class="p">.</span><span class="nx">Lexer</span><span class="p">.</span><span class="nx">clone</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
-  <span class="err">…</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">skip</span><span class="p">(</span><span class="sr">/\s+/</span><span class="p">)</span>
-<span class="p">})</span>
-</pre></div>
+<pre><code>var CalcLexer = elf.Lexer.clone(function () {
+    …
+    this.skip(/\s+/)
+})
+</code></pre>
 
-<p>Now that we have a lexer that we're happy with, let's turn our attention to writing a parser for it.
+<p>With our lexer i place, let's turn our attention to writing a parser.
 The parser abstraction in elf is based on Vaughan Pratt's Top Down Operator Precedence algorithm, for more information about it read his <a href="http://hall.org.ua/halls/wizzard/pdf/Vaughan.Pratt.TDOP.pdf">paper</a>, there's also a couple of blog posts about it <a href="http://javascript.crockford.com/tdop/tdop.html">here</a>, <a href="http://effbot.org/zone/simple-top-down-parsing.htm">here</a>, <a href="http://eli.thegreenplace.net/2010/01/02/top-down-operator-precedence-parsing/">here</a> and <a href="http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/">here</a>.</p>
 
-<p>So let's implement the parser, there are a few issues we have to deal with, first the '-' operator should be able to be used both in infix and prefix position and the '*' and '/' operators should have a higher precedence than '+' and '-'. Fortunately both of these features are elegantly handled by the "Top Down Operator  Precedence" algorithm:</p>
+<p>For our parser to work we have to deal with a few issues. First of all the '-' operator should be able to be used both in infix and prefix position and the '*' and '/' operators should have a higher precedence than '+' and '-'. Fortunately both of these features are elegantly handled by Pratt's algorithm:</p>
 
-<div class="highlight"><pre><span class="kd">var</span> <span class="nx">CalcParser</span> <span class="o">=</span> <span class="nx">elf</span><span class="p">.</span><span class="nx">Parser</span><span class="p">.</span><span class="nx">clone</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">prefix</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
+<pre><code>var CalcParser = elf.Parser.clone(function () {
+    this.prefix("-")
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"+"</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"*"</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
-<span class="p">});</span>
+    this.infix("+", 10)
+    this.infix("-", 10)
+    this.infix("*", 20)
+    this.infix("/", 20)
+});
 
-<span class="kd">var</span> <span class="nx">ast</span>  <span class="o">=</span> <span class="nx">CalcParser</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="s2">"1 + 2 * -3"</span><span class="p">,</span> <span class="nx">CalcLexer</span><span class="p">);</span>
-<span class="kd">var</span> <span class="nx">sexp</span> <span class="o">=</span> <span class="nx">elf</span><span class="p">.</span><span class="nx">sexp</span><span class="p">(</span><span class="nx">ast</span><span class="p">);</span>
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">sexp</span><span class="p">);</span> <span class="c1">//=&gt; (+ 1 (* 2 (- 3)))</span>
-</pre></div>
+
+var ast  = CalcParser.parse("1 + 2 * -3", CalcLexer);
+var sexp = elf.sexp(ast);
+console.log(sexp); //=&gt; (+ 1 (* 2 (- 3)))
+</code></pre>
 
 <p>Here we specify that '-' can appear in both prefix and infix locations we also specify that '+', '/' and '*' can appear in infix locations. The number we pass as the second argument to infix is it's precedence level so we assign '/' and '*' a higher precedence than '+' and '-'.
-To use the parser we invoke it's <code>parse</code> method passing in the source and lexer, this gives us an AST which we then pass to <code>elf.sexp</code>, this gives us a nicer representation for printing to the screen.</p>
+To use the parser we invoke it's <code>parse</code> method passing in the source and lexer, this gives us an AST which we then pass to <code>elf.sexp</code> which gives us a nicer representation for printing to the screen.</p>
 
 <p>However, since this is such a simple language it would be nice to just get the result of evaluating the input rather than an AST so let's do it:</p>
 
-<div class="highlight"><pre><span class="kd">var</span> <span class="nx">CalcEvaluator</span> <span class="o">=</span> <span class="nx">elf</span><span class="p">.</span><span class="nx">Parser</span><span class="p">.</span><span class="nx">clone</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">prefix</span><span class="p">(</span><span class="s2">"(literal)"</span><span class="p">,</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">value</span><span class="p">;</span> <span class="p">})</span>
+<pre><code>var CalcEvaluator = elf.Parser.clone(function () {
+  this.prefix("(literal)", function (token) { return token.value; })
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">prefix</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">parser</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="o">-</span><span class="nx">parser</span><span class="p">.</span><span class="nx">expression</span><span class="p">(</span><span class="mi">70</span><span class="p">)</span> <span class="p">})</span>
+  this.prefix("-", function () { return -this.expression(70) })
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"+"</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">parser</span><span class="p">,</span> <span class="nx">left</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">left</span> <span class="o">+</span> <span class="nx">parser</span><span class="p">.</span><span class="nx">expression</span><span class="p">();</span> <span class="p">})</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">parser</span><span class="p">,</span> <span class="nx">left</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">left</span> <span class="o">-</span> <span class="nx">parser</span><span class="p">.</span><span class="nx">expression</span><span class="p">();</span> <span class="p">})</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"*"</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">parser</span><span class="p">,</span> <span class="nx">left</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">left</span> <span class="o">*</span> <span class="nx">parser</span><span class="p">.</span><span class="nx">expression</span><span class="p">();</span> <span class="p">})</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">parser</span><span class="p">,</span> <span class="nx">left</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">left</span> <span class="o">/</span> <span class="nx">parser</span><span class="p">.</span><span class="nx">expression</span><span class="p">();</span> <span class="p">})</span>
-<span class="p">});</span>
+  this.infix("+", 10, function (token, left) { return left + this.expression(); })
+  this.infix("-", 10, function (token, left) { return left - this.expression(); })
+  this.infix("*", 20, function (token, left) { return left * this.expression(); })
+  this.infix("/", 20, function (token, left) { return left / this.expression(); })
+});
 
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">CalcEvaluator</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="s2">"1 + 2 * -3"</span><span class="p">,</span> <span class="nx">CalcLexer</span><span class="p">))</span> <span class="c1">//=&gt; -5</span>
-</pre></div>
+console.log(CalcEvaluator.parse("1 + 2 * -3", CalcLexer)) //=&gt; -5
+</code></pre>
 
 <p>There are two things to note here, the first is that we now add a prefix for the special '(literal)' symbol and specify that it should return it's value (in this case a number) rather than an AST node.
 The second is that we pass in functions to the <code>prefix</code> and <code>infix</code> methods, this can be used by regular parsers too in order to add more information to the node, and indeed for more complex syntactic forms they are necessary.</p>
+
+<p>As I previously stated, the above is fine for simple languages where interpretation/translation can be syntax directed but for more ambitious projects you typically walk the ast recursively to perform tasks such as optimization, dead code elimination, dependency resolution and code generation or interpretation.
+For this task elf supplies the Walker:</p>
+
+<pre><code>var _;
+
+CalcWalker = elf.Walker.clone(function () {
+  // Match unary -
+  this.match ("-", [ _ ], function (node, left) {
+    return -this.walk(left);
+  })
+
+  // Match binary -
+  this.match ("-", [ _ , _ ], function (node, left, right) {
+    return this.walk(left) - this.walk(right);
+  })
+
+  // Match binary +
+  this.match ("+", function (node, left, right) {
+    return this.walk(left) + this.walk(right);
+  })
+
+  // Match binary *
+  this.match ("*", function (node, left, right) {
+    return this.walk(left) * this.walk(right);
+  });
+
+  // Match and optimize binary * when the right node is 2 by turning it into a left shift
+  this.match ("*", [ _ , 2 ], function (node, left, right) {
+    return this.walk(left) &lt;&lt; 1;
+  });
+
+  // Match binary /
+  this.match ("/", function (node, left, right) {
+    return this.walk(left) / this.walk(right);
+  });
+
+  // Match any number and return it's value
+  this.match ("number", function (node) {
+    return node.value;
+  })
+});
+
+var res = CalcWalker.walk(ast);
+console.log(res) //=&gt; -5
+</code></pre>
+
+<p>As you can see it let's you match nodes based on their type or value and you can also optionally supply a pattern to be more specific. Undefined elements in a pattern are treated as catch-all so here we declare (but don't initialize) _, this means it will evaluate to undefined and so we can use that as the catch-all rather than typing out undefined everywhere. A pattern can also contain nested patterns, like: [2, ["*", 3, ["+", 4, 3"]]].</p>
       </section>
       <footer>
         <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
