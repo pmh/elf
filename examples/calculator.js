@@ -1,15 +1,13 @@
-var elf = require("../index");
+var elf = require("../index"), _;
 
 var CalcLexer = elf.Lexer.clone(function () {
   this.number     ( /\d+/         )
   this.operator   ( /\+|\-|\*|\// )
   this.skip       ( /\s+/         )
+  this.eol        ( /\;/          )
 })
 
-console.log("Tokens:\n", CalcLexer.lex("1 + 2 * 3"));
-
 var CalcParser = elf.Parser.clone(function () {
-
   this.prefix("-");
 
   this.infix("+", 10)
@@ -18,19 +16,43 @@ var CalcParser = elf.Parser.clone(function () {
   this.infix("/", 20)
 });
 
-var ast  = CalcParser.parse("1 + 2 * -3", CalcLexer);
-var sexp = elf.sexp(ast);
-console.log("\nsexp:\n", sexp);
+CalcWalker = elf.Walker.clone(function () {
+  // Match unary -
+  this.match ("-", [ _ ], function (node, left) {
+    return -this.walk(left);
+  })
 
-var CalcEvaluator = elf.Parser.clone(function () {
-  this.prefix("(literal)", function () { return this.value; })
+  // Match binary -
+  this.match ("-", [ _ , _ ], function (node, left, right) {
+    return this.walk(left) - this.walk(right);
+  })
 
-  this.prefix("-", function (parser) { return -parser.expression(70) })
+  // Match binary +
+  this.match ("+", function (node, left, right) {
+    return this.walk(left) + this.walk(right);
+  })
 
-  this.infix("+", 10, function (parser, left) { return left + parser.expression(); })
-  this.infix("-", 10, function (parser, left) { return left - parser.expression(); })
-  this.infix("*", 20, function (parser, left) { return left * parser.expression(); })
-  this.infix("/", 20, function (parser, left) { return left / parser.expression(); })
+  // Match binary *
+  this.match ("*", function (node, left, right) {
+    return this.walk(left) * this.walk(right);
+  });
+
+  // Match and optimize binary * when the right node is 2 by turning it into a left shift
+  this.match ("*", [ _ , 2 ], function (node, left, right) {
+    return this.walk(left) << 1;
+  });
+
+  // Match binary /
+  this.match ("/", function (node, left, right) {
+    return this.walk(left) / this.walk(right);
+  });
+
+  // Match any number and return it's value
+  this.match ("number", function (node) {
+    return node.value;
+  })
 });
 
-console.log("\nEVAL:\n", CalcEvaluator.parse("1 + 2 * -3", CalcLexer))
+var ast = CalcParser.parse("1 + 2 * -3", CalcLexer);
+var res = CalcWalker.walk(ast);
+console.log(res) //=> [ 3, 16 ]
