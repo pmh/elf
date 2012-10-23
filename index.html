@@ -163,7 +163,8 @@ CalcWalker = elf.Walker.clone(function () {
     return this.walk(left) * this.walk(right);
   });
 
-  // Match and optimize binary * when the right node is 2 by turning it into a left shift
+  // Match and optimize binary * when the right node is 2 by transforming 
+      // it into a left shift
   this.match ("*", [ _ , 2 ], function (node, left, right) {
     return this.walk(left) &lt;&lt; 1;
   });
