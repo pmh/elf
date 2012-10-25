@@ -24,20 +24,20 @@ describe ("Parser", function () {
   describe ("prefix", function () {
     it ("parses operators in prefix position", function () {
       parser.prefix("+")
-      elf.sexp(parser.parse("+x", lexer)).should.eql("(+ x)")
+      parser.parse("+x", lexer).toSexp().should.eql("(+ x)")
     });
   });
 
   describe ("infix", function () {
     it ("parses operators in infix position", function () {
       parser.infix("+", 10)
-      elf.sexp(parser.parse("x+y", lexer)).should.eql("(+ x y)")
+      parser.parse("x+y", lexer).toSexp().should.eql("(+ x y)")
     });
 
     it ("accepts a binding power to control operator precedence", function () {
       parser.infix("+", 10)
       parser.infix("*", 20)
-      elf.sexp(parser.parse("x+y*z", lexer)).should.eql("(+ x (* y z))")
+      parser.parse("x+y*z", lexer).toSexp().should.eql("(+ x (* y z))")
     });
   });
 
@@ -50,12 +50,12 @@ describe ("Parser", function () {
     });
     
     it ("parses statements", function () {
-      elf.sexp(parser.parse("return x", lexer)).should.eql("(return x)")
+      parser.parse("return x", lexer).toSexp().should.eql("(return x)")
     });
 
     it ("can't be part of an expression", function () {
       parser.infix("+", 10)
-      elf.sexp(parser.parse("x + return x", lexer)).should.eql("(+ x (<SyntaxError Unexpected token 'return' line 0, column [4, 9]> x))")
+      parser.parse("x + return x", lexer).toSexp().should.eql("(+ x (<SyntaxError: Unexpected prefix: 'return'> x))")
     });
   });
 
@@ -64,33 +64,33 @@ describe ("Parser", function () {
 
     it ("can parse single expressions", function () {
       parser.infix("+", 10)
-      elf.sexp(parser.parse("x", lexer)).should.eql("x");
-      elf.sexp(parser.parse("x + y", lexer)).should.eql("(+ x y)");
+      parser.parse("x", lexer).toSexp().should.eql("x");
+      parser.parse("x + y", lexer).toSexp().should.eql("(+ x y)");
     });
 
     it ("can parse complex expressions", function () {
       parser.infix("+", 10)
-      elf.sexp(parser.parse("x + y + z", lexer)).should.eql("(+ (+ x y) z)");
+      parser.parse("x + y + z", lexer).toSexp().should.eql("(+ (+ x y) z)");
     });
 
     it ("can parse multiple expressions", function () {
       parser.infix("+", 10)
       lexer.eol(";")
-      elf.sexp(parser.parse("x + y ; z + 21" , lexer)).should.eql("[(+ x y), (+ z 21)]");
-      elf.sexp(parser.parse("x + y ; z + 21;", lexer)).should.eql("[(+ x y), (+ z 21)]");
+      parser.parse("x + y ; z + 21" , lexer).toSexp().should.eql("(+ x y)\n(+ z 21)");
+      parser.parse("x + y ; z + 21;", lexer).toSexp().should.eql("(+ x y)\n(+ z 21)");
     });
 
     it ("gracefully recovers from parse errors", function () {
       parser.infix("+", 10)
 
-      elf.sexp(parser.parse("x!y", lexer)).should.
-        eql("[x, (<SyntaxError Unknown token '!' line 0, column [2, 2]> y)]");
+      parser.parse("x!y", lexer).toSexp().should.
+        eql("x\n(<SyntaxError: Unknown token: '!'> y)");
 
-      elf.sexp(parser.parse("x + y * 20", lexer)).should.
-        eql("[(+ x y), (<SyntaxError Unexpected token '*' line 0, column [6, 6]> 20)]");
+      parser.parse("x + y * 20", lexer).toSexp().should.
+        eql("(+ x y)\n(<SyntaxError: Unexpected prefix: '*'> 20)");
 
-      elf.sexp(parser.parse("+x", lexer)).should.
-        eql("(<SyntaxError Unexpected token '+' line 0, column [0, 0]> x)");
+      parser.parse("+x", lexer).toSexp().should.
+        eql("(<SyntaxError: Unexpected prefix: '+'> x)");
     })
   });
 
