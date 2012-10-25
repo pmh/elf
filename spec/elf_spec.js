@@ -13,8 +13,15 @@ describe ("elf", function () {
 
       it ("accepts a function containing initialization logic", function () {
         var obj = elf.Object.clone(function () { this.foo = "bar"; });
+        should.not.exist(elf.Object.foo)
         obj.foo.should.eql("bar");
       });
+
+      it ("accepts an initialization object", function () {
+        var obj = elf.Object.clone({foo: "bar"});
+        should.not.exist(elf.Object.foo)
+        obj.foo.should.eql("bar");
+      })
 
       it ("should be initialized with it's prototypes init method", function () {
         var obj = elf.Object.clone(function () {}), sub;
