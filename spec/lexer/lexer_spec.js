@@ -92,6 +92,24 @@ describe ("Lexer", function () {
       nl.line.should.eql(0);
     });
 
+    describe ("peek", function () {
+      it ("should return the next token if called without an argument", function () {
+        lexer.rule("number", /\d+/)
+        lexer.skip(/\s+/);
+        var tokens = lexer.lex('123 456');
+
+        tokens.peek().value.should.eql("123");
+      });
+
+      it ("should return the token at the index if called with an index", function () {
+        lexer.rule("number", /\d+/)
+        lexer.skip(/\s+/);
+        var tokens = lexer.lex('123 456');
+
+        tokens.peek(1).value.should.eql("456");
+      });
+    });
+
     it ("should keep track of the token line", function () {
       lexer.rule("name", /[a-zA-Z]+/);
       lexer.rule("(nl)", /\n/, function () { return "(nl)"; });
