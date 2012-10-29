@@ -155,8 +155,8 @@ describe ("Lexer", function () {
         lexer.error("e");
         lexer.tokens[0]._type.should.eql("ErrorToken");
         lexer.tokens[0].value.should.eql("e");
-        lexer.tokens[0].start.should.eql(0);
-        lexer.tokens[0].end.should.eql(1);
+        lexer.tokens[0].start.should.eql(-1);
+        lexer.tokens[0].end.should.eql(0);
         lexer.tokens[0].line.should.eql(0);
       });
 
