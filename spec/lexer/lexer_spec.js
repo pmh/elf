@@ -180,6 +180,19 @@ describe ("Lexer", function () {
       l2.lex('foo$').map(function (tok) { return [tok.type, tok.value] })[0].should.eql(["id", "foo$"]);
     })
   });
+
+  describe ("extend", function () {
+
+    it ("copies all rules from another lexer", function () {
+      lexer.rule ("id", /[a-zA-Z]+/ )
+      lexer.skip (/\s+/)
+      var l2 = Lexer.clone(function () { this.extend(lexer); });
+
+      l2.lex('foo bar').map(function (tok) { return [tok.type, tok.value] }).
+          should.eql([["id", "foo"], ["id", "bar"]]);
+    });
+  });
+
   describe ("Error Handling", function () {
     
 
