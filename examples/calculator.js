@@ -1,23 +1,16 @@
 var elf = require("../index"), sys = require("sys"), _;
 
-var CalcLexer = elf.Lexer.clone(function () {
-  this.number     ( /\d+/               )
-  this.name       ( /[a-zA-Z]+/         )
-  this.operator   ( /\+|\-|\*|\/|\=/    )
-  this.operator   ( /\(|\)|\{|\}|\,|\|/ )
-  this.operator   ( "print"             )
-  this.skip       ( /\s+/               )
-  this.eol        ( /\;/                )
-})
+var Calculator = elf.Language.clone(function () {
+  this.number ( /\d+/       )
+  this.name   ( /[a-zA-Z]+/ )
 
-var CalcParser = elf.Parser.clone(function () {
-  this.prefix ( "-"     )
+  this.prefix ( "-"         )
 
-  this.infixr ( "=", 10 )
-  this.infix  ( "+", 10 )
-  this.infix  ( "-", 10 )
-  this.infix  ( "*", 20 )
-  this.infix  ( "/", 20 )
+  this.infixr ( "=", 10     )
+  this.infix  ( "+", 10     )
+  this.infix  ( "-", 10     )
+  this.infix  ( "*", 20     )
+  this.infix  ( "/", 20     )
 
   this.prefix  ("{", function (node, left) {
     node.value  = "block";
@@ -65,6 +58,9 @@ var CalcParser = elf.Parser.clone(function () {
     node.arity = "statement";
     return node;
   });
+
+  this.skip ( /\s+/ )
+  this.eol  ( /\;/  )
 });
 
 CalcWalker = elf.Walker.clone(function () {
@@ -141,9 +137,8 @@ CalcWalker = elf.Walker.clone(function () {
   })
 });
 
-// var source = "print 1 3 * -3 + * 4;\nprint 3 ?? 4;";
 var source = require("fs").readFileSync(__dirname + "/test.calc", 'utf8');
-var ast    = CalcParser.parse(source, CalcLexer);
+var ast    = Calculator.parse(source);
 
 CalcWalker.walk(ast);
 
@@ -151,6 +146,6 @@ console.log("\n\nAST:\n")
 console.log('  ' + ast.toSexp().replace(/\n/g, '\n  '));
 
 console.log("\n\nErrors:")
-console.log(ast.errors(source) || '-');
+console.log(elf.ErrorWalker.walk(ast, source) || '-');
 
 // console.log(JSON.stringify(ast.nodes, null, '  '))

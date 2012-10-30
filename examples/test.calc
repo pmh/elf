@@ -2,10 +2,10 @@ add = { x, y | print x + y; };
 
 add(10, 20);
 
-log = { x | print x**y; };
+log = { x | print x*y; };
 
-y = 12 * (34 ^^ 4^);
+y = 12 * (34 + 4) * 4;
 
 log(y);
 
-print 23 $$ 234 + 23 * 45$$;
+print 23 - 234 + 23 * 45;
