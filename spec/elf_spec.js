@@ -3,6 +3,31 @@ var should = require( "should"     );
 
 describe ("elf", function () {
   
+  it ("defines Object", function () {
+    should.exist(elf.Object);
+  });
+
+  it ("defines Lexer", function () {
+    should.exist(elf.Lexer);
+  });
+
+  it ("defines Parser", function () {
+    should.exist(elf.Parser);
+  });
+
+  it ("defines Language", function () {
+    should.exist(elf.Language);
+  });
+
+  it ("defines Walker", function () {
+    should.exist(elf.Walker);
+  });
+
+  it ("defines ErrorWalker", function () {
+    should.exist(elf.ErrorWalker);
+  });
+
+
   describe("Object", function () {
 
     describe (".clone", function () {
