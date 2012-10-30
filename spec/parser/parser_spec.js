@@ -94,6 +94,21 @@ describe ("Parser", function () {
     })
   });
 
+  describe ("clone", function () {
+    it ("sets up a prototypal inheritance", function () {
+      var P1 = parser.clone(function () { this.infix('+', 10) });
+      var P2 = P1.clone(function () { this.infix('*', 20); });
+      
+      P2.parse('1 + 2 * 3', lexer).toSexp().should.eql("(+ 1 (* 2 3))");
+    });
+
+    it ("supports overriding of rules", function () {
+      var P1 = parser.clone(function () { this.infix('+', 10); this.infix('*', 20); });
+      var P2 = P1.clone(function () { this.infix('+', 20) });
+      
+      P2.parse('1 + 2 * 3', lexer).toSexp().should.eql("(* (+ 1 2) 3)");
+    })
+  });
 
   describe ("borrow", function () {
     it ("copies specific rule from another parser", function () {
@@ -116,4 +131,5 @@ describe ("Parser", function () {
       should.exist(parser.symbol_table.symbols["*"])
     });
   });
+
 });
