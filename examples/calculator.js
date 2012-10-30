@@ -60,12 +60,6 @@ var CalcParser = elf.Parser.clone(function () {
     return node;
   });
 
-  this.prefix ("(", function (node) {
-    var expr = this.expression();
-    this.advance(")");
-    return expr;
-  });
-
   this.stmt ("print", function (node) {
     node.first = this.expression();
     node.arity = "statement";
