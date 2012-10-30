@@ -164,6 +164,22 @@ describe ("Lexer", function () {
     });
   });
 
+  describe ("clone", function () {
+
+    it ("sets up a prototypal inheritance", function () {
+      lexer.rule ("id", /[a-zA-Z]+/ )
+      var l2 = lexer.clone();
+
+      l2.lex('foo').map(function (tok) { return [tok.type, tok.value] })[0].should.eql(["id", "foo"]);
+    });
+
+    it ("supports overriding of rules", function () {
+      lexer.rule ("id", /[a-zA-Z]+/ )
+      var l2 = lexer.clone(function () { this.rule('id', /[a-zA-Z\$]+/) });
+
+      l2.lex('foo$').map(function (tok) { return [tok.type, tok.value] })[0].should.eql(["id", "foo$"]);
+    })
+  });
   describe ("Error Handling", function () {
     
 
