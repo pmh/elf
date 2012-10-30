@@ -5,9 +5,6 @@ describe ("Lexer", function () {
   var lexer;
   beforeEach(function () {
     lexer = Lexer.clone();
-    lexer.rules  = [];
-    lexer.column = 0;
-    lexer.line   = 0;
   });
 
   describe (".rule", function () {
