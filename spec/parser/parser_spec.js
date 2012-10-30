@@ -61,6 +61,17 @@ describe ("Parser", function () {
 
 
   describe ("parse", function () {
+    it ("accepts a list of tokens", function () {
+      parser.infix("+", 10);
+
+      parser.parse(lexer.lex('1 + 2')).toSexp().should.eql("(+ 1 2)")
+    });
+
+    it ("accepts an input string and a lexer", function () {
+      parser.infix("+", 10);
+
+      parser.parse('1 + 2', lexer).toSexp().should.eql("(+ 1 2)")
+    });
 
     it ("can parse single expressions", function () {
       parser.infix("+", 10)
