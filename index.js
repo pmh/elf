@@ -1,1 +1,1 @@
-module.exports = require(__dirname + "/lib/elf");
+module.exports = require("./lib/elf");
