@@ -958,7 +958,7 @@ module.exports = AST;
 require.define("/lib/utils/error_walker.js",function(require,module,exports,__dirname,__filename,process,global){var Walker = require("../walker/walker"), ErrorWalker, _;
 
 ErrorWalker = Walker.clone(function () {
-  var errors;
+  var errors = {};
 
   this.match('error', function (node) {
     var childNodes = Array.prototype.slice.call(arguments, 1), self = this;
@@ -1020,7 +1020,6 @@ ErrorWalker = Walker.clone(function () {
   }
 
   this.walk = function (nodeList, source) {
-    errors = {};
     var walk = this.parent.walk.call(this, nodeList);
 
     return this.report(source);
