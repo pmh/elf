@@ -2,24 +2,15 @@
 
 ## Introduction
 
-elf let's you create reusable and extensible programming language implementations in JavaScript.
-It currently implements abstractions for creating parsers and lexers with automatic error-recovery and easy handling of operator precedence.
+ELF let's you create reusable and extensible programming language implementations in JavaScript.
+It implements abstractions for creating parsers and lexers with automatic error-recovery, easy handling of operator precedence and (basic) AST walkers with support for pattern-matching.
 
-elf takes advantage of JavaScript's prototypical nature so the way you create Lexers and Parsers is by 'cloning' the ones elf provides which can in turn be cloned by more specific ones. This makes it very easy to extend existing languages.
+ELF takes advantage of JavaScript's prototypical nature so the way you create languages is by 'cloning' existing ones can in turn be cloned by more specific ones. This, combined with the ability to mixin and borrow rules, makes it very easy to extend existing languages.
 
-elf also recognizes that you sometimes want to use rules from many different objects and it provides two ways of doing just that. The first is `extend` and the second is `borrow`.
-
-`extend` copies all the properties from one or more objects to the receiver (works with both parsers and lexers)
-
-	myParser.extend(mySecondParser, myThirdParser);
-
-`borrow` let's you reuse specific rules from another parser (only works with parsers for now)
-
-	myParser.borrow(myOtherParser, "+", "-");
 
 ## Installation
 
-There isn't an npm module yet so if you want to try it out you should follow these steps:
+There is no npm module yet so if you want to try it out you should follow these steps:
 
 	> git clone https://github.com/pmh/elf.git
 	> mkdir my-lang
@@ -28,116 +19,250 @@ There isn't an npm module yet so if you want to try it out you should follow the
 
 This will create a 'node_modules' folder inside 'my-lang' containing the elf module.
 
-## Calculator
-To help you understand the basics of elf let's use it to implement a simple calculator language so create a file called `calculator.js`.
-The first thing you need to do is to require elf, so enter this into `calculator.js`:
-	
-	var elf = require("elf")
+## Calculator Example
 
-The next thing we will need is a lexer that can recognize numbers and operators (such as +, -, *, /), here's how that could be implemented:
-	
-	var CalcLexer = elf.Lexer.clone(function () {
-		this.number(/\d+/)
-		this.operator(/\+|\-|\*|\//)
-	})
+```js
+var elf = require('elf'), _;
 
-`number` and `operator` are convenience methods implemented on top of the lower-level `rule` method so we could have implemented this more verbosely with `this.rule("number", /\d+/, this.helpers.number, "literal")`. Besides `number` and `operator` you can also use `name`, `string`, `regex`, `eol` and `skip`.
+var Calculator = elf.Language.clone(function () {
+  this.number(/\d+/)
+  
+  this.prefix("-")
+  
+  this.infix("+", 10)
+  this.infix("-", 10)
+  this.infix("*", 20)
+  this.infix("/", 20)
+  
+  this.stmt ("print", function (node) {
+    node.first = this.expression();
+    node.arity = "statement";
+    return node;
+  });
+  
+  this.skip(/\s+/)
+  this.eol(";")
+});
 
-So now that we have our lexer, let's try it out but first add the following line just under the lexer:
+var Interpreter = elf.Walker.clone(function () {
+  this.match('-', [ _ ], function (node, right) {
+  	return -this.walk(right);
+  })
+  
+  this.match('-', [ _ , _ ], function (node, left, right) {
+  	return this.walk(left) - this.walk(right);
+  })
+  
+  this.match('+', function (node, left, right) {
+  	return this.walk(left) + this.walk(right);
+  })
+  
+  this.match('*', function (node, left, right) {
+  	return this.walk(left) * this.walk(right);
+  })
+  
+  this.match('*', [ _ , 2 ], function (node, left, right) {
+  	return this.walk(left) >> 1;
+  })
+  
+  this.match('/', function (node, left, right) {
+  	return this.walk(left) / this.walk(right);
+  })
+  
+  this.match('print', function (node, first) {
+  	console.log(this.walk(first));
+  });
+  
+  this.match(_, function (node) {
+  	return node.value;
+  })
+});
 
-	console.log(CalcLexer.lex("1+2*-3")) //=> […tokens…]
+var ast = Calculator.parse('print 1 + 2 * 3;print 4-2;');
 
-Now from a command line execute `node calculator.js` and you should se a list of tokens.
-There's currently a problem with our lexer however, try adding spaces in the input string (eg. "1 + 2 * 3") and run it again. You will know see the same token list as before but with the addition of 'error' tokens everywhere a space was found. We can fix that by adding the following line to the lexer:
+Interpreter.walk(ast);
+```
 
-	var CalcLexer = elf.Lexer.clone(function () {
-		…
-		this.skip(/\s+/)
-	})
+## API
 
-With our lexer i place, let's turn our attention to writing a parser.
-The parser abstraction in elf is based on Vaughan Pratt's Top Down Operator Precedence algorithm, for more information about it read his [paper](http://hall.org.ua/halls/wizzard/pdf/Vaughan.Pratt.TDOP.pdf), there's also a couple of blog posts about it [here](http://javascript.crockford.com/tdop/tdop.html), [here](http://effbot.org/zone/simple-top-down-parsing.htm), [here](http://eli.thegreenplace.net/2010/01/02/top-down-operator-precedence-parsing/) and [here](http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/).
+### elf.Object
 
-For our parser to work we have to deal with a few issues. First of all the '-' operator should be able to be used both in infix and prefix position and the '*' and '/' operators should have a higher precedence than '+' and '-'. Fortunately both of these features are elegantly handled by Pratt's algorithm:
+**Provides an abstraction for JavaScript's rather clunky implementation of protoypal inheritence.**
 
-	var CalcParser = elf.Parser.clone(function () {
-		this.prefix("-")
-		
-		this.infix("+", 10)
-		this.infix("-", 10)
-		this.infix("*", 20)
-		this.infix("/", 20)
-	});
-	
-	
-	var ast  = CalcParser.parse("1 + 2 * -3", CalcLexer);
-	var sexp = elf.sexp(ast);
-	console.log(sexp); //=> (+ 1 (* 2 (- 3)))
+ - `.clone(initializer<function|object>)`
+ 
+  	*Returns a new object whose prototype link points to the object being cloned.
+  	It accepts either a function or an object with initialization logic which will 
+  	be applied to the new object.*
+ 
+ - `.extend(…mixins)`
+ 	
+ 	*Copies all properties from each of the mixin objects over to itself.*
+ 
+ - `.slots()`
+ 	
+ 	*Returns an array of all it's properties.*
 
-Here we specify that '-' can appear in both prefix and infix locations we also specify that '+', '/' and '\*' can appear in infix locations. The number we pass as the second argument to infix is it's precedence level so we assign '/' and '\*' a higher precedence than '+' and '-'.
-To use the parser we invoke it's `parse` method passing in the source and lexer, this gives us an AST which we then pass to `elf.sexp` which gives us a nicer representation for printing to the screen.
+### elf.Token
+**Represents a lexical token.**
 
-However, since this is such a simple language it would be nice to just get the result of evaluating the input rather than an AST so let's do it:
+  - `.create(type, value)`
+  	
+  	*Creates and returns a new token object from the current one with type and value set*
+  
+  - `.error(message<string>)`
+  
+  	*Turns the token into an error token*
+  
+  - `.pos(pos<object>)`
+  	
+  	*Updates the token position*
 
-	var CalcEvaluator = elf.Parser.clone(function () {
-	  this.prefix("(literal)", function (token) { return token.value; })
-	
-	  this.prefix("-", function () { return -this.expression(70) })
-	
-	  this.infix("+", 10, function (token, left) { return left + this.expression(); })
-	  this.infix("-", 10, function (token, left) { return left - this.expression(); })
-	  this.infix("*", 20, function (token, left) { return left * this.expression(); })
-	  this.infix("/", 20, function (token, left) { return left / this.expression(); })
-	});
-	
-	console.log(CalcEvaluator.parse("1 + 2 * -3", CalcLexer)) //=> -5
+### elf.Lexer
+ 	
+**Provides a lexer abstraction on top of which you can base your own more specific lexers**
 
-There are two things to note here, the first is that we now add a prefix for the special '(literal)' symbol and specify that it should return it's value (in this case a number) rather than an AST node.
-The second is that we pass in functions to the `prefix` and `infix` methods, this can be used by regular parsers too in order to add more information to the node, and indeed for more complex syntactic forms they are necessary.
+ - `.name(match<regexp|string>, [action<function>])`
+ 	
+ 	*Creates a rule for matching identifiers based on the provided match object.*
 
-As I previously stated, the above is fine for simple languages where interpretation/translation can be syntax directed but for more ambitious projects you typically walk the ast recursively to perform tasks such as optimization, dead code elimination, dependency resolution and code generation or interpretation.
-For this task elf supplies the Walker:
+ - `.number(match<regexp|string>, [action<function>])`
+ 	
+ 	*Creates a rule for matching number literals based on the provided match object.*
+ 
+ - `.string(match<regexp|string>, [action<function>])`
+ 	
+ 	*Creates a rule for matching strings literals based on the provided match object.*
 
-	var _;
-	
-	CalcWalker = elf.Walker.clone(function () {
-	  // Match unary -
-	  this.match ("-", [ _ ], function (node, left) {
-		return -this.walk(left);
-	  })
-	  
-	  // Match binary -
-	  this.match ("-", [ _ , _ ], function (node, left, right) {
-		return this.walk(left) - this.walk(right);
-	  })
-	
-	  // Match binary +
-	  this.match ("+", function (node, left, right) {
-    	return this.walk(left) + this.walk(right);
-	  })
-	  
-	  // Match binary *
-	  this.match ("*", function (node, left, right) {
-	    return this.walk(left) * this.walk(right);
-	  });
-	  
-	  // Match and optimize binary * when the right node is 2 by turning it into a left shift
-	  this.match ("*", [ _ , 2 ], function (node, left, right) {
-	    return this.walk(left) << 1;
-	  });
-	  
-	  // Match binary /
-	  this.match ("/", function (node, left, right) {
-	    return this.walk(left) / this.walk(right);
-	  });
-	  
-	  // Match any number and return it's value
-	  this.match ("number", function (node) {
-	    return node.value;
-	  })
-	});
-	
-	var res = CalcWalker.walk(ast);
-	console.log(res) //=> -5
+ - `.regex(match<regexp|string>, [action<function>])`
+ 	
+ 	*Creates a rule for matching regex literals based on the provided match object.*
 
-As you can see it let's you match nodes based on their type or value and you can also optionally supply a pattern to be more specific. Undefined elements in a pattern are treated as catch-all so here we declare (but don't initialize) _, this means it will evaluate to undefined and so we can use that as the catch-all rather than typing out undefined everywhere. A pattern can also contain nested patterns, like: [2, ["*", 3, ["+", 4, 3"]]].
+ - `.operator(match<regexp|string>, [action<function>])`
+ 	
+ 	*Creates a rule for matching operators based on the provided match object.*
+ 
+ - `.eol(match<regexp|string>, [action<function>])`
+
+	*Creates a rule for matching end-of-line operators based on the provided match object.*
+
+ - `.skip(match<regexp|string>)`
+
+	*Tells the lexer to skip anything matching the provided match object.*
+
+ - `.rule(name, regex, action, arity)`
+ 	
+ 	*A lower-level matcher that all of the previous rules are based upon.*
+ 
+ *All of the above methods accepts an optional action function that will be invoked when the rule matches. The context inside the action is the matched token. It can return one of three things: a single token, an array of tokens or undefined, in which case the lexer will ignore the match.*
+ 
+ 
+### elf.Parser
+
+ - `.advance([id])`
+ 
+ 	*Advances to the next token, if an id is provided an error node will be created if it doesn't match the id of the next token.*
+ 
+ - `.expression([rbp])`
+ 
+   *Parses a single expression, if an rbp (right binding power) is provided then it will only parse as long as the next token has the same binding power or higher.*
+ 
+ - `.statement()`
+ 	
+ 	*Parses a single statement.*
+ 	
+ - `.stmt(id, std<function(node)>)`
+ 
+ 	*Creates a rule for matching a statement. A statement can only appear at the beginning of an expression.*
+ 	
+ - `.block(openTag, closeTag)`
+ 
+ 	*Parses a block of code delimited by openTag and closeTag.*
+ 
+ - `.prefix(id, [nud<function(node)>])`
+ 
+ 	*Creates a rule for matching prefix tokens, similar to stmt exept that it can appear multiple times in an expression.*
+ 
+ - `.infix(id, bp, [led<function(node, left)>])`
+ 	
+ 	*Creates a rule for matching tokens in infix position. Can appear multiple times in an expression.*
+ 	
+ - `.infixr(id, bp, [led<function(node, left)>])`
+ 
+ 	*Like infix except that it associates to the right.*
+ 
+ - `.borrow(parser, ...rules)`
+ 
+ 	*Let's you borrow a set of rules from another parser.*
+ 
+ - `.token`
+ 
+ 	*Always points to the current token.*
+ 
+ - `.tokens`
+ 	
+ 	*A collection of all the remaining tokens. It has a `.peek([n])` method that let's you look at the next token without consuming it.*
+ 
+ - `.parse(tokens<Array>)`
+ 
+ 	*Accepts a collection of tokens and returns an AST.*
+
+### elf.Language
+
+ - `.name(regex<regexp|string>, [action<function(token)>])`
+ 
+ 	*Creates a rule for matching identifiers based on the provided match object.*
+ 
+ - `.number(regex<regexp|string>, [action<function(token)>])`
+ 
+ 	*Creates a rule for matching numbers based on the provided match object.*
+ 
+ - `.string(regex<regexp|string>, [action<function(token)>])`
+
+	*Creates a rule for matching strings based on the provided match object.*
+
+ - `.regex(regex<regexp|string>, [action<function(token)>])`
+ 
+ 	*Creates a rule for matching regular expressions based on the provided match object.*
+ 
+ - `.eol(regex<regexp|string>, [action<function(token)>])`
+ 	
+ 	*Creates a rule for matching end-of-line operators based on the provided match object.*
+ 
+ - `.skip(regex<regexp|string>, [action<function(token)>])`
+ 
+ 	*Tells the language to skip anything matching the provided match object.*
+ 
+  - `.stmt(id<string>, std<function(node)>);`
+ 
+ 	*Creates a rule for matching a statement. A statement can only appear at the beginning of an expression.*
+ 
+ - `.prefix(id<string>, [nud<function(node)>])`
+ 
+ 	*Creates a rule for matching prefix tokens, similar to stmt exept that it can appear multiple times in an expression.*
+ 	
+ - `.infix(id<string>, bp<integer>, [led<function(node, left)>])`
+ 	
+ 	*Creates a rule for matching tokens in infix position. Can appear multiple times in an expression.*
+ 
+ - `.infixr(id<string>, bp<integer>, [led<function(node, left)>])`
+ 
+ 	*Like infix except that it associates to the right.*
+ 
+ - `.borrow(language, ...rules)`
+ 
+ 	*Let's you borrow a set of rules from another parser.*
+ 
+ - `.parse(input<string>)`
+ 
+ 	*Accepts a program string and returns an AST.*
+
+### elf.Walker
+
+ - `.match(match<string|number>, [pattern<array>], action<function(node, child1, child2, …, childN)>)`
+ 
+ 	*Executes the action if the type or value of the current node matches the match argument and if the provided (optional) pattern matches.*
+ 
+ - `.walk(ast<AST|Node|Array>)`
+ 
+ 	*Walks the ast and returns whatever your actions return.*
