@@ -34,26 +34,14 @@
 
 <h2>Introduction</h2>
 
-<p>elf let's you create reusable and extensible programming language implementations in JavaScript.
-It currently implements abstractions for creating parsers and lexers with automatic error-recovery and easy handling of operator precedence.</p>
+<p>ELF let's you create reusable and extensible programming language implementations in JavaScript.
+It implements abstractions for creating parsers and lexers with automatic error-recovery, easy handling of operator precedence and (basic) AST walkers with support for pattern-matching.</p>
 
-<p>elf takes advantage of JavaScript's prototypical nature so the way you create Lexers and Parsers is by 'cloning' the ones elf provides which can in turn be cloned by more specific ones. This makes it very easy to extend existing languages.</p>
-
-<p>elf also recognizes that you sometimes want to use rules from many different objects and it provides two ways of doing just that. The first is <code>extend</code> and the second is <code>borrow</code>.</p>
-
-<p><code>extend</code> copies all the properties from one or more objects to the receiver (works with both parsers and lexers)</p>
-
-<pre><code>myParser.extend(mySecondParser, myThirdParser);
-</code></pre>
-
-<p><code>borrow</code> let's you reuse specific rules from another parser (only works with parsers for now)</p>
-
-<pre><code>myParser.borrow(myOtherParser, "+", "-");
-</code></pre>
+<p>ELF takes advantage of JavaScript's prototypical nature so the way you create languages is by 'cloning' existing ones can in turn be cloned by more specific ones. This, combined with the ability to mixin and borrow rules, makes it very easy to extend existing languages.</p>
 
 <h2>Installation</h2>
 
-<p>There isn't an npm module yet so if you want to try it out you should follow these steps:</p>
+<p>There is no npm module yet so if you want to try it out you should follow these steps:</p>
 
 <pre><code>&gt; git clone https://github.com/pmh/elf.git
 &gt; mkdir my-lang
@@ -63,143 +51,300 @@ It currently implements abstractions for creating parsers and lexers with automa
 
 <p>This will create a 'node_modules' folder inside 'my-lang' containing the elf module.</p>
 
-<h2>Calculator</h2>
+<h2>Calculator Example</h2>
 
-<p>To help you understand the basics of elf let's use it to implement a simple calculator language so create a file called <code>calculator.js</code>.
-The first thing you need to do is to require elf, so enter this into <code>calculator.js</code>:</p>
+<div class="highlight"><pre><span class="kd">var</span> <span class="nx">elf</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'elf'</span><span class="p">),</span> <span class="nx">_</span><span class="p">;</span>
 
-<pre><code>var elf = require("elf")
-</code></pre>
+<span class="kd">var</span> <span class="nx">Calculator</span> <span class="o">=</span> <span class="nx">elf</span><span class="p">.</span><span class="nx">Language</span><span class="p">.</span><span class="nx">clone</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+  <span class="k">this</span><span class="p">.</span><span class="nx">number</span><span class="p">(</span><span class="sr">/\d+/</span><span class="p">)</span>
 
-<p>The next thing we will need is a lexer that can recognize numbers and operators (such as +, -, *, /), here's how that could be implemented:</p>
+  <span class="k">this</span><span class="p">.</span><span class="nx">prefix</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
 
-<pre><code>var CalcLexer = elf.Lexer.clone(function () {
-    this.number(/\d+/)
-    this.operator(/\+|\-|\*|\//)
-})
-</code></pre>
+  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"+"</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"*"</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
 
-<p><code>number</code> and <code>operator</code> are convenience methods implemented on top of the lower-level <code>rule</code> method so we could have implemented this more verbosely with <code>this.rule("number", /\d+/, this.helpers.number, "literal")</code>. Besides <code>number</code> and <code>operator</code> you can also use <code>name</code>, <code>string</code>, <code>regex</code>, <code>eol</code> and <code>skip</code>.</p>
+  <span class="k">this</span><span class="p">.</span><span class="nx">stmt</span> <span class="p">(</span><span class="s2">"print"</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">node</span><span class="p">.</span><span class="nx">first</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">expression</span><span class="p">();</span>
+    <span class="nx">node</span><span class="p">.</span><span class="nx">arity</span> <span class="o">=</span> <span class="s2">"statement"</span><span class="p">;</span>
+    <span class="k">return</span> <span class="nx">node</span><span class="p">;</span>
+  <span class="p">});</span>
 
-<p>So now that we have our lexer, let's try it out but first add the following line just under the lexer:</p>
+  <span class="k">this</span><span class="p">.</span><span class="nx">skip</span><span class="p">(</span><span class="sr">/\s+/</span><span class="p">)</span>
+  <span class="k">this</span><span class="p">.</span><span class="nx">eol</span><span class="p">(</span><span class="s2">";"</span><span class="p">)</span>
+<span class="p">});</span>
 
-<pre><code>console.log(CalcLexer.lex("1+2*-3")) //=&gt; […tokens…]
-</code></pre>
+<span class="kd">var</span> <span class="nx">Interpreter</span> <span class="o">=</span> <span class="nx">elf</span><span class="p">.</span><span class="nx">Walker</span><span class="p">.</span><span class="nx">clone</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'-'</span><span class="p">,</span> <span class="p">[</span> <span class="nx">_</span> <span class="p">],</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="o">-</span><span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">right</span><span class="p">);</span>
+  <span class="p">})</span>
 
-<p>Now from a command line execute <code>node calculator.js</code> and you should se a list of tokens.
-There's currently a problem with our lexer however, try adding spaces in the input string (eg. "1 + 2 * 3") and run it again. You will know see the same token list as before but with the addition of 'error' tokens everywhere a space was found. We can fix that by adding the following line to the lexer:</p>
+  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'-'</span><span class="p">,</span> <span class="p">[</span> <span class="nx">_</span> <span class="p">,</span> <span class="nx">_</span> <span class="p">],</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">left</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">left</span><span class="p">)</span> <span class="o">-</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">right</span><span class="p">);</span>
+  <span class="p">})</span>
 
-<pre><code>var CalcLexer = elf.Lexer.clone(function () {
-    …
-    this.skip(/\s+/)
-})
-</code></pre>
+  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'+'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">left</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">left</span><span class="p">)</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">right</span><span class="p">);</span>
+  <span class="p">})</span>
 
-<p>With our lexer i place, let's turn our attention to writing a parser.
-The parser abstraction in elf is based on Vaughan Pratt's Top Down Operator Precedence algorithm, for more information about it read his <a href="http://hall.org.ua/halls/wizzard/pdf/Vaughan.Pratt.TDOP.pdf">paper</a>, there's also a couple of blog posts about it <a href="http://javascript.crockford.com/tdop/tdop.html">here</a>, <a href="http://effbot.org/zone/simple-top-down-parsing.htm">here</a>, <a href="http://eli.thegreenplace.net/2010/01/02/top-down-operator-precedence-parsing/">here</a> and <a href="http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/">here</a>.</p>
+  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'*'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">left</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">left</span><span class="p">)</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">right</span><span class="p">);</span>
+  <span class="p">})</span>
 
-<p>For our parser to work we have to deal with a few issues. First of all the '-' operator should be able to be used both in infix and prefix position and the '*' and '/' operators should have a higher precedence than '+' and '-'. Fortunately both of these features are elegantly handled by Pratt's algorithm:</p>
+  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'*'</span><span class="p">,</span> <span class="p">[</span> <span class="nx">_</span> <span class="p">,</span> <span class="mi">2</span> <span class="p">],</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">left</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">left</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">})</span>
 
-<pre><code>var CalcParser = elf.Parser.clone(function () {
-    this.prefix("-")
+  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">left</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">left</span><span class="p">)</span> <span class="o">/</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">right</span><span class="p">);</span>
+  <span class="p">})</span>
 
-    this.infix("+", 10)
-    this.infix("-", 10)
-    this.infix("*", 20)
-    this.infix("/", 20)
-});
+  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'print'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">first</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">first</span><span class="p">));</span>
+  <span class="p">});</span>
 
+  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="nx">_</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">node</span><span class="p">.</span><span class="nx">value</span><span class="p">;</span>
+  <span class="p">})</span>
+<span class="p">});</span>
 
-var ast  = CalcParser.parse("1 + 2 * -3", CalcLexer);
-var sexp = elf.sexp(ast);
-console.log(sexp); //=&gt; (+ 1 (* 2 (- 3)))
-</code></pre>
+<span class="kd">var</span> <span class="nx">ast</span> <span class="o">=</span> <span class="nx">Calculator</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="s1">'print 1 + 2 * 3;print 4-2;'</span><span class="p">);</span>
 
-<p>Here we specify that '-' can appear in both prefix and infix locations we also specify that '+', '/' and '*' can appear in infix locations. The number we pass as the second argument to infix is it's precedence level so we assign '/' and '*' a higher precedence than '+' and '-'.
-To use the parser we invoke it's <code>parse</code> method passing in the source and lexer, this gives us an AST which we then pass to <code>elf.sexp</code> which gives us a nicer representation for printing to the screen.</p>
+<span class="nx">Interpreter</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">ast</span><span class="p">);</span>
+</pre></div>
 
-<p>However, since this is such a simple language it would be nice to just get the result of evaluating the input rather than an AST so let's do it:</p>
+<h2>API</h2>
 
-<pre><code>var CalcEvaluator = elf.Parser.clone(function () {
-  this.prefix("(literal)", function (token) {
-    return token.value;
-  })
+<h3>elf.Object</h3>
 
-  this.prefix("-", function () {
-    return -this.expression(70)
-  })
+<p><strong>Provides an abstraction for JavaScript's rather clunky implementation of protoypal inheritence.</strong></p>
 
-  this.infix("+", 10, function (token, left) {
-    return left + this.expression();
-  })
+<ul>
+<li>
+<p><code>.clone(initializer&lt;function|object&gt;)</code></p>
 
-  this.infix("-", 10, function (token, left) {
-    return left - this.expression();
-  })
+<p><em>Returns a new object whose prototype link points to the object being cloned.
+It accepts either a function or an object with initialization logic which will 
+be applied to the new object.</em></p>
+</li>
+<li>
+<p><code>.extend(…mixins)</code></p>
 
-  this.infix("*", 20, function (token, left) {
-    return left * this.expression();
-  })
+<p><em>Copies all properties from each of the mixin objects over to itself.</em></p>
+</li>
+<li>
+<p><code>.slots()</code></p>
 
-  this.infix("/", 20, function (token, left) {
-    return left / this.expression();
-  })
-});
+<p><em>Returns an array of all it's properties.</em></p>
+</li>
+</ul><h3>elf.Token</h3>
 
-console.log(CalcEvaluator.parse("1 + 2 * -3", CalcLexer)) //=&gt; -5
-</code></pre>
+<p><strong>Represents a lexical token.</strong></p>
 
-<p>There are two things to note here, the first is that we now add a prefix for the special '(literal)' symbol and specify that it should return it's value (in this case a number) rather than an AST node.
-The second is that we pass in functions to the <code>prefix</code> and <code>infix</code> methods, this can be used by regular parsers too in order to add more information to the node, and indeed for more complex syntactic forms they are necessary.</p>
+<ul>
+<li>
+<p><code>.create(type, value)</code></p>
 
-<p>As I previously stated, the above is fine for simple languages where interpretation/translation can be syntax directed but for more ambitious projects you typically walk the ast recursively to perform tasks such as optimization, dead code elimination, dependency resolution and code generation or interpretation.
-For this task elf supplies the Walker:</p>
+<p><em>Creates and returns a new token object from the current one with type and value set</em></p>
+</li>
+<li>
+<p><code>.error(message&lt;string&gt;)</code></p>
 
-<pre><code>var _;
+<p><em>Turns the token into an error token</em></p>
+</li>
+<li>
+<p><code>.pos(pos&lt;object&gt;)</code></p>
 
-CalcWalker = elf.Walker.clone(function () {
-  // Match unary -
-  this.match ("-", [ _ ], function (node, left) {
-    return -this.walk(left);
-  })
+<p><em>Updates the token position</em></p>
+</li>
+</ul><h3>elf.Lexer</h3>
 
-  // Match binary -
-  this.match ("-", [ _ , _ ], function (node, left, right) {
-    return this.walk(left) - this.walk(right);
-  })
+<p><strong>Provides a lexer abstraction on top of which you can base your own more specific lexers</strong></p>
 
-  // Match binary +
-  this.match ("+", function (node, left, right) {
-    return this.walk(left) + this.walk(right);
-  })
+<ul>
+<li>
+<p><code>.name(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
 
-  // Match binary *
-  this.match ("*", function (node, left, right) {
-    return this.walk(left) * this.walk(right);
-  });
+<p><em>Creates a rule for matching identifiers based on the provided match object.</em></p>
+</li>
+<li>
+<p><code>.number(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
 
-  // Match and optimize binary * when the right node is 2 by transforming 
-  // it into a left shift
-  this.match ("*", [ _ , 2 ], function (node, left, right) {
-    return this.walk(left) &lt;&lt; 1;
-  });
+<p><em>Creates a rule for matching number literals based on the provided match object.</em></p>
+</li>
+<li>
+<p><code>.string(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
 
-  // Match binary /
-  this.match ("/", function (node, left, right) {
-    return this.walk(left) / this.walk(right);
-  });
+<p><em>Creates a rule for matching strings literals based on the provided match object.</em></p>
+</li>
+<li>
+<p><code>.regex(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
 
-  // Match any number and return it's value
-  this.match ("number", function (node) {
-    return node.value;
-  })
-});
+<p><em>Creates a rule for matching regex literals based on the provided match object.</em></p>
+</li>
+<li>
+<p><code>.operator(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
 
-var res = CalcWalker.walk(ast);
-console.log(res) //=&gt; -5
-</code></pre>
+<p><em>Creates a rule for matching operators based on the provided match object.</em></p>
+</li>
+<li>
+<p><code>.eol(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
 
-<p>As you can see it let's you match nodes based on their type or value and you can also optionally supply a pattern to be more specific. Undefined elements in a pattern are treated as catch-all so here we declare (but don't initialize) _, this means it will evaluate to undefined and so we can use that as the catch-all rather than typing out undefined everywhere. A pattern can also contain nested patterns, like: [2, ["*", 3, ["+", 4, 3"]]].</p>
+<p><em>Creates a rule for matching end-of-line operators based on the provided match object.</em></p>
+</li>
+<li>
+<p><code>.skip(match&lt;regexp|string&gt;)</code></p>
+
+<p><em>Tells the lexer to skip anything matching the provided match object.</em></p>
+</li>
+<li>
+<p><code>.rule(name, regex, action, arity)</code></p>
+
+<p><em>A lower-level matcher that all of the previous rules are based upon.</em></p>
+
+<p><em>All of the above methods accepts an optional action function that will be invoked when the rule matches. The context inside the action is the matched token. It can return one of three things: a single token, an array of tokens or undefined, in which case the lexer will ignore the match.</em></p>
+</li>
+</ul><h3>elf.Parser</h3>
+
+<ul>
+<li>
+<p><code>.advance([id])</code></p>
+
+<p><em>Advances to the next token, if an id is provided an error node will be created if it doesn't match the id of the next token.</em></p>
+</li>
+<li>
+<p><code>.expression([rbp])</code></p>
+
+<p><em>Parses a single expression, if an rbp (right binding power) is provided then it will only parse as long as the next token has the same binding power or higher.</em></p>
+</li>
+<li>
+<p><code>.statement()</code></p>
+
+<p><em>Parses a single statement.</em></p>
+</li>
+<li>
+<p><code>.stmt(id, std&lt;function(node)&gt;)</code></p>
+
+<p><em>Creates a rule for matching a statement. A statement can only appear at the beginning of an expression.</em></p>
+</li>
+<li>
+<p><code>.block(openTag, closeTag)</code></p>
+
+<p><em>Parses a block of code delimited by openTag and closeTag.</em></p>
+</li>
+<li>
+<p><code>.prefix(id, [nud&lt;function(node)&gt;])</code></p>
+
+<p><em>Creates a rule for matching prefix tokens, similar to stmt exept that it can appear multiple times in an expression.</em></p>
+</li>
+<li>
+<p><code>.infix(id, bp, [led&lt;function(node, left)&gt;])</code></p>
+
+<p><em>Creates a rule for matching tokens in infix position. Can appear multiple times in an expression.</em></p>
+</li>
+<li>
+<p><code>.infixr(id, bp, [led&lt;function(node, left)&gt;])</code></p>
+
+<p><em>Like infix except that it associates to the right.</em></p>
+</li>
+<li>
+<p><code>.borrow(parser, ...rules)</code></p>
+
+<p><em>Let's you borrow a set of rules from another parser.</em></p>
+</li>
+<li>
+<p><code>.token</code></p>
+
+<p><em>Always points to the current token.</em></p>
+</li>
+<li>
+<p><code>.tokens</code></p>
+
+<p><em>A collection of all the remaining tokens. It has a <code>.peek([n])</code> method that let's you look at the next token without consuming it.</em></p>
+</li>
+<li>
+<p><code>.parse(tokens&lt;Array&gt;)</code></p>
+
+<p><em>Accepts a collection of tokens and returns an AST.</em></p>
+</li>
+</ul><h3>elf.Language</h3>
+
+<ul>
+<li>
+<p><code>.name(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
+
+<p><em>Creates a rule for matching identifiers based on the provided match object.</em></p>
+</li>
+<li>
+<p><code>.number(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
+
+<p><em>Creates a rule for matching numbers based on the provided match object.</em></p>
+</li>
+<li>
+<p><code>.string(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
+
+<p><em>Creates a rule for matching strings based on the provided match object.</em></p>
+</li>
+<li>
+<p><code>.regex(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
+
+<p><em>Creates a rule for matching regular expressions based on the provided match object.</em></p>
+</li>
+<li>
+<p><code>.eol(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
+
+<p><em>Creates a rule for matching end-of-line operators based on the provided match object.</em></p>
+</li>
+<li>
+<p><code>.skip(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
+
+<p><em>Tells the language to skip anything matching the provided match object.</em></p>
+
+<ul>
+<li><code>.stmt(id&lt;string&gt;, std&lt;function(node)&gt;);</code></li>
+</ul>
+<p><em>Creates a rule for matching a statement. A statement can only appear at the beginning of an expression.</em></p>
+</li>
+<li>
+<p><code>.prefix(id&lt;string&gt;, [nud&lt;function(node)&gt;])</code></p>
+
+<p><em>Creates a rule for matching prefix tokens, similar to stmt exept that it can appear multiple times in an expression.</em></p>
+</li>
+<li>
+<p><code>.infix(id&lt;string&gt;, bp&lt;integer&gt;, [led&lt;function(node, left)&gt;])</code></p>
+
+<p><em>Creates a rule for matching tokens in infix position. Can appear multiple times in an expression.</em></p>
+</li>
+<li>
+<p><code>.infixr(id&lt;string&gt;, bp&lt;integer&gt;, [led&lt;function(node, left)&gt;])</code></p>
+
+<p><em>Like infix except that it associates to the right.</em></p>
+</li>
+<li>
+<p><code>.borrow(language, ...rules)</code></p>
+
+<p><em>Let's you borrow a set of rules from another parser.</em></p>
+</li>
+<li>
+<p><code>.parse(input&lt;string&gt;)</code></p>
+
+<p><em>Accepts a program string and returns an AST.</em></p>
+</li>
+</ul><h3>elf.Walker</h3>
+
+<ul>
+<li>
+<p><code>.match(match&lt;string|number&gt;, [pattern&lt;array&gt;], action&lt;function(node, child1, child2, …, childN)&gt;)</code></p>
+
+<p><em>Executes the action if the type or value of the current node matches the match argument and if the provided (optional) pattern matches.</em></p>
+</li>
+<li>
+<p><code>.walk(ast&lt;AST|Node|Array&gt;)</code></p>
+
+<p><em>Walks the ast and returns whatever your actions return.</em></p>
+</li>
+</ul>
       </section>
       <footer>
         <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
