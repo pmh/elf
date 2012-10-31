@@ -1,6 +1,6 @@
 {
   "author": "Patrik Hedman <patrik.hedman@gmail.com>",
-  "name": "elf",
+  "name": "elf.js",
   "description": "elf (ECMAScript Language Framework) is a DSL for creating reusable and extensible programing language implementations.",
   "version": "0.1.0",
   "repository": {
