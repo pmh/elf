@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
     <link rel="stylesheet" href="stylesheets/codemirror/codemirror.css">
     <script src="javascripts/scale.fix.js"></script>
+    <script src="javascripts/elf.js"></script>
     <script src="javascripts/codemirror/codemirror.js"></script>
     <script src="javascripts/codemirror/mode/javascript/javascript.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
@@ -158,7 +159,29 @@ Interpreter.walk(ast);
 <h3>elf.Object</h3>
 
 <p><strong>Provides an abstraction for JavaScript's rather clunky implementation of protoypal inheritence.</strong></p>
+<div class="editor">
+  <textarea>var elf = require('elf');
 
+var Person = elf.Object.clone(function () {
+  this.greet = function (person, message) { console.log(this.name + " says: " + message + ' ' + person.name + '!'); }
+
+  this.init  = function () { this.name = "Anonymous" }
+});
+
+var patrik = Person.clone({name: "Patrik"});
+var anon   = Person.clone();
+
+patrik.greet(anon, "Hello");
+
+patrik.extend({age: 27}, {occupation: "Hacker"});
+patrik.describe = function () {
+  console.log("name: " + this.name + ", age: " + this.age + ", occupation: " + this.occupation);
+};
+
+patrik.describe();
+  </textarea>
+</div>
+<br />
 <ul>
 <li>
 <p><code>.clone(initializer&lt;function|object&gt;)</code></p>
@@ -201,6 +224,28 @@ be applied to the new object.</em></p>
 
 <p><strong>Provides a lexer abstraction on top of which you can base your own more specific lexers</strong></p>
 
+<div class="editor">
+  <textarea>var elf = require('elf');
+
+var MyLexer = elf.Lexer.clone(function () {
+  
+  this.name(/[a-zA-Z]+/)
+
+  this.operator("+")
+
+  // This is the equivalent of this.number(/\d+/)
+  this.rule("number", /\d+/, function (num) { return parseFloat(num, 10); }, "(literal)")
+
+  // this is the equivalent as this.skip(/\s+/)
+  this.rule('ws', /\s+/, function () { return null; });
+});
+
+var tokens = MyLexer.lex('foo + 3');
+console.log(tokens);
+  </textarea>
+</div>
+<br />
+
 <ul>
 <li>
 <p><code>.name(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
@@ -242,9 +287,33 @@ be applied to the new object.</em></p>
 
 <p><em>A lower-level matcher that all of the previous rules are based upon.</em></p>
 
-<p><em>All of the above methods accepts an optional action function that will be invoked when the rule matches. The context inside the action is the matched token. It can return one of three things: a single token, an array of tokens or undefined, in which case the lexer will ignore the match.</em></p>
+<p><em>All of the above methods accepts an optional action function that will be invoked when the rule matches. The context inside the action is the matched token. It can return one of three things: a value (which will be set as the value on the current token), an array of tokens or null (in which case the lexer will ignore the match).</em></p>
 </li>
 </ul><h3>elf.Parser</h3>
+
+<p><strong>Provides a parser abstraction on top of which you can base your own more specific parsers</strong></p>
+
+<div class="editor">
+  <textarea>var elf = require('elf');
+
+var MyLexer = elf.Lexer.clone(function () {
+  this.number(/\d+/);
+  this.operator(/\+|\*/);
+  this.skip(/\s+/)
+});
+
+var MyParser = elf.Parser.clone(function () {
+  
+  this.infix("+", 10)
+  this.infix("*", 20)
+});
+
+var tokens = MyLexer.lex('2 + 4 * 4');
+var ast    = MyParser.parse(tokens);
+console.log(ast.toSexp());
+  </textarea>
+</div>
+<br />
 
 <ul>
 <li>
@@ -309,6 +378,27 @@ be applied to the new object.</em></p>
 </li>
 </ul><h3>elf.Language</h3>
 
+  <p><strong>Provides a unified abstraction for lexers and parsers.</strong></p>
+
+<div class="editor">
+  <textarea>var elf = require('elf');
+
+var MyLanguage = elf.Language.clone(function () {
+  this.number(/\d+/);
+
+  this.infix("+", 10)
+  this.infix("*", 20)
+
+  this.skip(/\s+/)
+});
+
+var ast = MyLanguage.parse('2 + 4 * 4');
+console.log(ast.toSexp());
+  </textarea>
+</div>
+<br />
+
+
 <ul>
 <li>
 <p><code>.name(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
@@ -372,6 +462,50 @@ be applied to the new object.</em></p>
 </li>
 </ul><h3>elf.Walker</h3>
 
+  <p><strong>Recursively walks the AST and applies your matchers.</strong></p>
+
+<div class="editor">
+  <textarea>var elf = require('elf'), _;
+
+var MyLanguage = elf.Language.clone(function () {
+  this.number(/\d+/);
+
+  this.infix("+", 10)
+  this.infix("*", 20)
+
+  this.stmt('print', function (node) {
+    node.first = this.expression();
+    node.arity = "statment";
+    return node;
+  })
+
+  this.skip(/\s+/)
+});
+
+var MyWalker = elf.Walker.clone(function () {
+  this.match("+", function (node, left, right) {
+    return this.walk(left) + this.walk(right);
+  })
+
+  this.match("*", function (node, left, right) {
+    return this.walk(left) * this.walk(right);
+  })
+
+  this.match("print", function (node, right) {
+    console.log(this.walk(right));
+  })
+
+  this.match(_, function (node) {
+    return node.value;
+  })
+});
+
+var ast = MyLanguage.parse('print 2 + 4 * 4');
+MyWalker.walk(ast);
+  </textarea>
+</div>
+<br />
+
 <ul>
 <li>
 <p><code>.match(match&lt;string|number&gt;, [pattern&lt;array&gt;], action&lt;function(node, child1, child2, …, childN)&gt;)</code></p>
@@ -420,8 +554,18 @@ be applied to the new object.</em></p>
             output.className = 'output';
             editorContainer.appendChild(output);
           }
-          var res;
-          iframe.contentWindow.console = { log: function (value) { res = '<span style="font-weight:bold;">Output:</span><br>' + value; } };
+          var res = '<span style="font-weight:bold;">Output:</span>';
+          iframe.contentWindow.console.log = function() {
+            var messages = [];
+            // Convert all arguments to Strings (Objects will be JSONified).
+            for (var i = 0; i < arguments.length; i++) {
+              var value = arguments[i];
+              messages.push(typeof(value) == 'object' ? JSON.stringify(value) : String(value));
+            }
+            var msg = messages.join(" ");
+            res += "<br />" + msg;
+          };
+          iframe.contentWindow.require = function () { return elf; };
           sandbox.eval(editor.getValue());
           output.innerHTML = res;
         };
