@@ -79,21 +79,16 @@ It implements abstractions for creating parsers and lexers with automatic error-
 
 <h2>Installation</h2>
 
-<p>There is no npm module yet so if you want to try it out you should follow these steps:</p>
-
-<pre><code>&gt; git clone https://github.com/pmh/elf.git
-&gt; mkdir my-lang
+<pre><code>&gt; mkdir my-lang
 &gt; cd my-lang
-&gt; npm link ../elf
+&gt; npm install elf.js
 </code></pre>
-
-<p>This will create a 'node_modules' folder inside 'my-lang' containing the elf module.</p>
 
 <h2>Calculator Example</h2>
 
 <div class="editor">
 <textarea>
-var elf = require('elf'), _;
+var elf = require('elf.js'), _;
 
 var Calculator = elf.Language.clone(function () {
   this.number(/\d+/)
@@ -161,7 +156,7 @@ Interpreter.walk(ast);
 
 <p><strong>Provides an abstraction over JavaScript's implementation of protoypal inheritence.</strong></p>
 <div class="editor">
-  <textarea>var elf = require('elf');
+  <textarea>var elf = require('elf.js');
 
 var Person = elf.Object.clone(function () {
   this.greet = function (person, message) { console.log(this.name + " says: " + message + ' ' + person.name + '!'); }
@@ -228,7 +223,7 @@ be applied to the new object.</em></p>
 <p><strong>Provides a lexer abstraction on top of which you can base your own more specific lexers</strong></p>
 
 <div class="editor">
-  <textarea>var elf = require('elf');
+  <textarea>var elf = require('elf.js');
 
 var MyLexer = elf.Lexer.clone(function () {
   
@@ -297,7 +292,7 @@ console.log(tokens);
 <p><strong>Provides a parser abstraction on top of which you can base your own more specific parsers</strong></p>
 
 <div class="editor">
-  <textarea>var elf = require('elf');
+  <textarea>var elf = require('elf.js');
 
 var MyLexer = elf.Lexer.clone(function () {
   this.number(/\d+/);
@@ -384,7 +379,7 @@ console.log(ast.toSexp());
   <p><strong>Provides a unified abstraction for lexers and parsers.</strong></p>
 
 <div class="editor">
-  <textarea>var elf = require('elf');
+  <textarea>var elf = require('elf.js');
 
 var MyLanguage = elf.Language.clone(function () {
   this.number(/\d+/);
@@ -469,7 +464,7 @@ console.log(ast.toSexp());
   <p><strong>Recursively walks the AST and applies your matchers.</strong></p>
 
 <div class="editor">
-  <textarea>var elf = require('elf'), _;
+  <textarea>var elf = require('elf.js'), _;
 
 var MyLanguage = elf.Language.clone(function () {
   this.number(/\d+/);
@@ -528,7 +523,7 @@ MyWalker.walk(ast);
   <p><strong>Recursively walks the AST collecting error nodes.</strong></p>
 
 <div class="editor">
-  <textarea>var elf = require('elf'), _;
+  <textarea>var elf = require('elf.js'), _;
 
 var MyLanguage = elf.Language.clone(function () {
   this.number(/\d+/);
