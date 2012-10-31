@@ -48,6 +48,7 @@
         padding: 5px;
         border: 1px solid black; 
         border-top: 0;
+        font-family:monospace;
       }
     </style>
 
@@ -158,7 +159,7 @@ Interpreter.walk(ast);
 
 <h3>elf.Object</h3>
 
-<p><strong>Provides an abstraction for JavaScript's rather clunky implementation of protoypal inheritence.</strong></p>
+<p><strong>Provides an abstraction over JavaScript's implementation of protoypal inheritence.</strong></p>
 <div class="editor">
   <textarea>var elf = require('elf');
 
@@ -175,11 +176,13 @@ patrik.greet(anon, "Hello");
 
 patrik.extend({age: 27}, {occupation: "Hacker"});
 patrik.describe = function () {
-  console.log("name: " + this.name + ", age: " + this.age + ", occupation: " + this.occupation);
+  console.log("name:", this.name + ", age:", this.age + ", occupation:", this.occupation);
 };
 
 patrik.describe();
-  </textarea>
+
+console.log('slots:', patrik.slots());
+</textarea>
 </div>
 <br />
 <ul>
@@ -242,7 +245,7 @@ var MyLexer = elf.Lexer.clone(function () {
 
 var tokens = MyLexer.lex('foo + 3');
 console.log(tokens);
-  </textarea>
+</textarea>
 </div>
 <br />
 
@@ -285,9 +288,9 @@ console.log(tokens);
 <li>
 <p><code>.rule(name, regex, action, arity)</code></p>
 
-<p><em>A lower-level matcher that all of the previous rules are based upon.</em></p>
+<p><em>A lower-level matcher that all of the previous ones are based upon.</em></p>
 
-<p><em>All of the above methods accepts an optional action function that will be invoked when the rule matches. The context inside the action is the matched token. It can return one of three things: a value (which will be set as the value on the current token), an array of tokens or null (in which case the lexer will ignore the match).</em></p>
+<p><em>All of the above methods accepts an optional action function that will be invoked when the rule matches. The context inside the action is the matched string. It can return one of three things: a value (which will be set as the value on the current token), an array of tokens or null (in which case the lexer will ignore the match).</em></p>
 </li>
 </ul><h3>elf.Parser</h3>
 
@@ -311,7 +314,7 @@ var MyParser = elf.Parser.clone(function () {
 var tokens = MyLexer.lex('2 + 4 * 4');
 var ast    = MyParser.parse(tokens);
 console.log(ast.toSexp());
-  </textarea>
+</textarea>
 </div>
 <br />
 
@@ -319,7 +322,7 @@ console.log(ast.toSexp());
 <li>
 <p><code>.advance([id])</code></p>
 
-<p><em>Advances to the next token, if an id is provided an error node will be created if it doesn't match the id of the next token.</em></p>
+<p><em>Advances to the next token, if an id is provided an error node will be created if it doesn't match the id of that token.</em></p>
 </li>
 <li>
 <p><code>.expression([rbp])</code></p>
@@ -332,14 +335,14 @@ console.log(ast.toSexp());
 <p><em>Parses a single statement.</em></p>
 </li>
 <li>
-<p><code>.stmt(id, std&lt;function(node)&gt;)</code></p>
-
-<p><em>Creates a rule for matching a statement. A statement can only appear at the beginning of an expression.</em></p>
-</li>
-<li>
 <p><code>.block(openTag, closeTag)</code></p>
 
 <p><em>Parses a block of code delimited by openTag and closeTag.</em></p>
+</li>
+<li>
+<p><code>.stmt(id, std&lt;function(node)&gt;)</code></p>
+
+<p><em>Creates a rule for matching a statement. A statement can only appear at the beginning of an expression.</em></p>
 </li>
 <li>
 <p><code>.prefix(id, [nud&lt;function(node)&gt;])</code></p>
@@ -394,7 +397,7 @@ var MyLanguage = elf.Language.clone(function () {
 
 var ast = MyLanguage.parse('2 + 4 * 4');
 console.log(ast.toSexp());
-  </textarea>
+</textarea>
 </div>
 <br />
 
@@ -430,10 +433,11 @@ console.log(ast.toSexp());
 
 <p><em>Tells the language to skip anything matching the provided match object.</em></p>
 
-<ul>
-<li><code>.stmt(id&lt;string&gt;, std&lt;function(node)&gt;);</code></li>
-</ul>
-<p><em>Creates a rule for matching a statement. A statement can only appear at the beginning of an expression.</em></p>
+<li>
+  <p><code>.stmt(id&lt;string&gt;, std&lt;function(node)&gt;)</code></p>
+  <p><em>Creates a rule for matching a statement. A statement can only appear at the beginning of an expression.</em></p>
+</li>
+
 </li>
 <li>
 <p><code>.prefix(id&lt;string&gt;, [nud&lt;function(node)&gt;])</code></p>
@@ -453,7 +457,7 @@ console.log(ast.toSexp());
 <li>
 <p><code>.borrow(language, ...rules)</code></p>
 
-<p><em>Let's you borrow a set of rules from another parser.</em></p>
+<p><em>Let's you borrow a set of rules from another language.</em></p>
 </li>
 <li>
 <p><code>.parse(input&lt;string&gt;)</code></p>
@@ -502,7 +506,7 @@ var MyWalker = elf.Walker.clone(function () {
 
 var ast = MyLanguage.parse('print 2 + 4 * 4');
 MyWalker.walk(ast);
-  </textarea>
+</textarea>
 </div>
 <br />
 
@@ -516,6 +520,44 @@ MyWalker.walk(ast);
 <p><code>.walk(ast&lt;AST|Node|Array&gt;)</code></p>
 
 <p><em>Walks the ast and returns whatever your actions return.</em></p>
+</li>
+</ul>
+
+<h3>elf.ErrorWalker</h3>
+
+  <p><strong>Recursively walks the AST collecting error nodes.</strong></p>
+
+<div class="editor">
+  <textarea>var elf = require('elf'), _;
+
+var MyLanguage = elf.Language.clone(function () {
+  this.number(/\d+/);
+
+  this.infix("+", 10)
+  this.infix("*", 20)
+
+  this.stmt('print', function (node) {
+    node.first = this.expression();
+    node.arity = "statment";
+    return node;
+  })
+
+  this.skip(/\s+/)
+});
+
+var ast      = MyLanguage.parse('print !!? + 4 ** 4');
+var errorMsg = elf.ErrorWalker.walk(ast, 'print !!? + 4 ** 4');
+
+console.log(errorMsg);
+</textarea>
+</div>
+<br />
+
+<ul>
+<li>
+<p><code>.walk(ast&lt;AST&gt;)</code></p>
+
+<p><em>Walks the ast and generates an error report.</em></p>
 </li>
 </ul>
       </section>
@@ -537,6 +579,7 @@ MyWalker.walk(ast);
         "<\/script>"
       );
 
+
       var createEditorFrom = function (editorContainer) {
         var editor         = CodeMirror.fromTextArea(editorContainer.getElementsByTagName('textarea')[0], {lineNumbers: true});
         var controls       = document.createElement("div");
@@ -548,6 +591,14 @@ MyWalker.walk(ast);
         editorContainer.appendChild(controls)
 
         var clickHandler = function () {
+
+          var oldWalk = elf.ErrorWalker.walk;
+          elf.ErrorWalker.walk = function () {
+            this.walk = oldWalk;
+            return oldWalk.apply(this, arguments).replace(/\n\n/, '<br />').replace(/ /g, '&nbsp;').replace(/\n/g, '<br />');
+          }
+          elf.ErrorWalker.errors = {};
+
           var output = editorContainer.getElementsByClassName('output')[0];
           if (!output) {
             output           = document.createElement('div');
