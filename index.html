@@ -7,13 +7,49 @@
 
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <link rel="stylesheet" href="stylesheets/codemirror/codemirror.css">
     <script src="javascripts/scale.fix.js"></script>
+    <script src="javascripts/codemirror/codemirror.js"></script>
+    <script src="javascripts/codemirror/mode/javascript/javascript.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
   </head>
   <body>
+    <style type="text/css">
+      .CodeMirror {
+        border: 1px solid black;
+        border-bottom: 0;
+      }
+
+      .CodeMirror-scroll {
+        height: auto;
+        overflow-y: hidden;
+        overflow-x: auto;
+      }
+
+      .controls {
+        background-color: #eee;
+        height: 22px;
+        padding: 5px;
+        border: 1px solid black;
+      }
+
+      .runButton {
+        float: right;
+        width: 80px;
+        height: 22px;
+      }
+
+      .output {
+        /*background-color: #eee;*/
+        padding: 5px;
+        border: 1px solid black; 
+        border-top: 0;
+      }
+    </style>
+
     <div class="wrapper">
       <header>
         <h1 class="header">Elf</h1>
@@ -53,66 +89,69 @@ It implements abstractions for creating parsers and lexers with automatic error-
 
 <h2>Calculator Example</h2>
 
-<div class="highlight"><pre><span class="kd">var</span> <span class="nx">elf</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'elf'</span><span class="p">),</span> <span class="nx">_</span><span class="p">;</span>
+<div class="editor">
+<textarea>
+var elf = require('elf'), _;
 
-<span class="kd">var</span> <span class="nx">Calculator</span> <span class="o">=</span> <span class="nx">elf</span><span class="p">.</span><span class="nx">Language</span><span class="p">.</span><span class="nx">clone</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">number</span><span class="p">(</span><span class="sr">/\d+/</span><span class="p">)</span>
+var Calculator = elf.Language.clone(function () {
+  this.number(/\d+/)
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">prefix</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
+  this.prefix("-")
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"+"</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"*"</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">infix</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+  this.infix("+", 10)
+  this.infix("-", 10)
+  this.infix("*", 20)
+  this.infix("/", 20)
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">stmt</span> <span class="p">(</span><span class="s2">"print"</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">node</span><span class="p">.</span><span class="nx">first</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">expression</span><span class="p">();</span>
-    <span class="nx">node</span><span class="p">.</span><span class="nx">arity</span> <span class="o">=</span> <span class="s2">"statement"</span><span class="p">;</span>
-    <span class="k">return</span> <span class="nx">node</span><span class="p">;</span>
-  <span class="p">});</span>
+  this.stmt ("print", function (node) {
+    node.first = this.expression();
+    node.arity = "statement";
+    return node;
+  });
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">skip</span><span class="p">(</span><span class="sr">/\s+/</span><span class="p">)</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">eol</span><span class="p">(</span><span class="s2">";"</span><span class="p">)</span>
-<span class="p">});</span>
+  this.skip(/\s+/)
+  this.eol(";")
+});
 
-<span class="kd">var</span> <span class="nx">Interpreter</span> <span class="o">=</span> <span class="nx">elf</span><span class="p">.</span><span class="nx">Walker</span><span class="p">.</span><span class="nx">clone</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
-  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'-'</span><span class="p">,</span> <span class="p">[</span> <span class="nx">_</span> <span class="p">],</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="o">-</span><span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">right</span><span class="p">);</span>
-  <span class="p">})</span>
+var Interpreter = elf.Walker.clone(function () {
+  this.match('-', [ _ ], function (node, right) {
+    return -this.walk(right);
+  })
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'-'</span><span class="p">,</span> <span class="p">[</span> <span class="nx">_</span> <span class="p">,</span> <span class="nx">_</span> <span class="p">],</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">left</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">left</span><span class="p">)</span> <span class="o">-</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">right</span><span class="p">);</span>
-  <span class="p">})</span>
+  this.match('-', [ _ , _ ], function (node, left, right) {
+    return this.walk(left) - this.walk(right);
+  })
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'+'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">left</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">left</span><span class="p">)</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">right</span><span class="p">);</span>
-  <span class="p">})</span>
+  this.match('+', function (node, left, right) {
+    return this.walk(left) + this.walk(right);
+  })
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'*'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">left</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">left</span><span class="p">)</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">right</span><span class="p">);</span>
-  <span class="p">})</span>
+  this.match('*', function (node, left, right) {
+    return this.walk(left) * this.walk(right);
+  })
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'*'</span><span class="p">,</span> <span class="p">[</span> <span class="nx">_</span> <span class="p">,</span> <span class="mi">2</span> <span class="p">],</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">left</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">left</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">;</span>
-  <span class="p">})</span>
+  this.match('*', [ _ , 2 ], function (node, left, right) {
+    return this.walk(left) >> 1;
+  })
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">left</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">left</span><span class="p">)</span> <span class="o">/</span> <span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">right</span><span class="p">);</span>
-  <span class="p">})</span>
+  this.match('/', function (node, left, right) {
+    return this.walk(left) / this.walk(right);
+  })
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="s1">'print'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">first</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">first</span><span class="p">));</span>
-  <span class="p">});</span>
+  this.match('print', function (node, first) {
+    console.log(this.walk(first));
+  });
 
-  <span class="k">this</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="nx">_</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">node</span><span class="p">.</span><span class="nx">value</span><span class="p">;</span>
-  <span class="p">})</span>
-<span class="p">});</span>
+  this.match(_, function (node) {
+    return node.value;
+  })
+});
 
-<span class="kd">var</span> <span class="nx">ast</span> <span class="o">=</span> <span class="nx">Calculator</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="s1">'print 1 + 2 * 3;print 4-2;'</span><span class="p">);</span>
+var ast = Calculator.parse('print 1 + 2 * 3;print 4-2;');
 
-<span class="nx">Interpreter</span><span class="p">.</span><span class="nx">walk</span><span class="p">(</span><span class="nx">ast</span><span class="p">);</span>
-</pre></div>
+Interpreter.walk(ast);
+</textarea>
+</div>
 
 <h2>API</h2>
 
@@ -350,6 +389,52 @@ be applied to the new object.</em></p>
         <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
       </footer>
     </div>
+
+    <script type="text/javascript">
+      var iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      document.body.appendChild(iframe);
+
+      // write a script into the <iframe> and create the sandbox
+      frames[frames.length - 1].document.write(
+        "<script>"+
+        "var MSIE/*@cc_on =1@*/;"+ // sniff
+        "parent.sandbox=MSIE?this:{eval:function(s){return eval(s)}}"+
+        "<\/script>"
+      );
+
+      var createEditorFrom = function (editorContainer) {
+        var editor         = CodeMirror.fromTextArea(editorContainer.getElementsByTagName('textarea')[0], {lineNumbers: true});
+        var controls       = document.createElement("div");
+        controls.className = "controls";
+        var run            = document.createElement("button");
+        run.className      = "runButton";
+        run.textContent    = "Run";
+        controls.appendChild(run);
+        editorContainer.appendChild(controls)
+
+        var clickHandler = function () {
+          var output = editorContainer.getElementsByClassName('output')[0];
+          if (!output) {
+            output           = document.createElement('div');
+            output.className = 'output';
+            editorContainer.appendChild(output);
+          }
+          var res;
+          iframe.contentWindow.console = { log: function (value) { res = '<span style="font-weight:bold;">Output:</span><br>' + value; } };
+          sandbox.eval(editor.getValue());
+          output.innerHTML = res;
+        };
+
+        run.addEventListener ? run.addEventListener('click', clickHandler, false) : run.attachEvent('click', clickHandler);
+      }
+
+      var editors = document.getElementsByClassName('editor');
+      for (var i = 0; i < editors.length; i++)
+        createEditorFrom(editors[i]);
+    </script>
+
+
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
 		          <script type="text/javascript">
             var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
