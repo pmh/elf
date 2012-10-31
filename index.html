@@ -545,8 +545,9 @@ var MyLanguage = elf.Language.clone(function () {
   this.skip(/\s+/)
 });
 
-var ast      = MyLanguage.parse('print !!? + 4 ** 4');
-var errorMsg = elf.ErrorWalker.walk(ast, 'print !!? + 4 ** 4');
+var source   = 'print !!? + 4 ** 4';
+var ast      = MyLanguage.parse(source);
+var errorMsg = elf.ErrorWalker.walk(ast, source);
 
 console.log(errorMsg);
 </textarea>
@@ -591,14 +592,7 @@ console.log(errorMsg);
         editorContainer.appendChild(controls)
 
         var clickHandler = function () {
-
-          var oldWalk = elf.ErrorWalker.walk;
-          elf.ErrorWalker.walk = function () {
-            this.walk = oldWalk;
-            return oldWalk.apply(this, arguments).replace(/\n\n/, '<br />').replace(/ /g, '&nbsp;').replace(/\n/g, '<br />');
-          }
-          elf.ErrorWalker.errors = {};
-
+          
           var output = editorContainer.getElementsByClassName('output')[0];
           if (!output) {
             output           = document.createElement('div');
@@ -631,7 +625,7 @@ console.log(errorMsg);
 
 
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
-		          <script type="text/javascript">
+              <script type="text/javascript">
             var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
             document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
           </script>

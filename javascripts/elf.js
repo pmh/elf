@@ -978,6 +978,8 @@ ErrorWalker = Walker.clone(function () {
 
   this.addError = function (errorNode) {
     if (!errors[errorNode.line]) errors[errorNode.line] = [];
+    if (errors[errorNode.line].some(function (err) { return err.message === errorNode.message() && err.start === errorNode.start && err.end === errorNode.end }))
+      errors[errorNode.line] = [];
     errors[errorNode.line].push({message: errorNode.message(), start: errorNode.start, end: errorNode.end});
   }
 
@@ -1013,7 +1015,7 @@ ErrorWalker = Walker.clone(function () {
       }
     }
     if (report) {
-      report = '\n------------- Errors -------------\n' + report + '\n\n----------------------------------\n';
+      report = ('\n------------- Errors -------------\n' + report + '\n\n----------------------------------\n').replace(/ /g, '&nbsp;').replace(/\n/g, '<br />');
     }
 
     return report;
@@ -1021,8 +1023,7 @@ ErrorWalker = Walker.clone(function () {
 
   this.walk = function (nodeList, source) {
     var walk = this.parent.walk.call(this, nodeList);
-
-    return this.report(source);
+    return this.report(source);;
   };
 })
 
