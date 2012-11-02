@@ -19,6 +19,10 @@ describe ("elf", function () {
     should.exist(elf.Language);
   });
 
+  it ("defines REPL", function () {
+    should.exist(elf.REPL);
+  });
+
   it ("defines Walker", function () {
     should.exist(elf.Walker);
   });
