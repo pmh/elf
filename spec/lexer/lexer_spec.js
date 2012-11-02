@@ -21,6 +21,53 @@ describe ("Lexer", function () {
       lexer.rules.length.should.eql(1);
       lexer.rules[0].name.should.eql("number");
     });
+
+    describe ('action', function () {
+
+      describe("when it returns an array of tokens", function () {
+        it ("concatenates them onto the token stream", function () {
+          lexer.name(/[a-z]+/, function (name) {
+            return name.split('').map(function (n) {
+              return this.create("name", n);
+            }, this)
+          })
+
+          var tokens = lexer.lex('foo');
+          tokens.map(function (n) { return n.value }).should.eql(['f', 'o', 'o'])
+        });
+
+        it ("correctly jusitifes position information", function () {
+          lexer.name(/[a-z]+/, function (name) {
+            return name.split('').map(function (n) {
+              return this.create("name", n);
+            }, this)
+          })
+
+          var tokens = lexer.lex('foo');
+          tokens.map(function (n) { return [n.start, n.end] }).should.eql([[0, 0], [1, 1], [2, 2]])
+        });
+
+        it ('jusitifes the column', function () {
+          lexer.name(/[a-z]+/, function (name) {
+            return name.split('').map(function (n) {
+              return this.create("name", n + '!');
+            }, this)
+          })
+
+          var tokens = lexer.lex('foo')
+          lexer.column.should.eql(6);
+        })
+      });
+
+      describe("when it returns null", function () {
+        it ("throws the token away", function () {
+          lexer.name(/[a-z]+/, function (name) { return null; })
+          var tokens = lexer.lex('foo');
+
+          tokens.length.should.eql(0);
+        })
+      })
+    })
   });
 
   describe ("advance", function () {
