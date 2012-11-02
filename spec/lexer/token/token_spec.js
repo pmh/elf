@@ -10,15 +10,21 @@ describe ("Token", function () {
   describe ("create", function () {
 
     it ("returns a cloned token instance", function () {
-      var token = Token.create("name", "foo", {});
+      var token = Token.create("name", "foo");
       token.__proto__.should.eql(Token);
     });
 
     it ("initializes the new object with the values passed to it", function () {
-      var token = Token.create("number", 23, {start: 0, end: 3, line: 0});
+      var token = Token.create("number", 23);
       token. type.  should. eql ( "number" );
       token. value. should. eql ( 23       );
+      should.not.exist(token.arity);
     });
+
+    it ("accepts an optional arity", function () {
+      var token = Token.create("number", 23, '(literal)');
+      token. arity.  should. eql ( "(literal)" );
+    })
   });
 
   describe ("pos", function () {
