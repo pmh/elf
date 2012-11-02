@@ -7,6 +7,36 @@ describe ("Token", function () {
     Token._type.should.eql("Token");
   });
 
+  describe ("arityMap", function () {
+    it ("maps name to (name)", function () {
+      Token.arityMap.name.should.eql('(name)');
+    });
+
+    it ("maps number to (literal)", function () {
+      Token.arityMap.number.should.eql('(literal)');
+    });
+
+    it ("maps string to (literal)", function () {
+      Token.arityMap.string.should.eql('(literal)');
+    });
+
+    it ("maps regexe to (literal)", function () {
+      Token.arityMap.regex.should.eql('(literal)');
+    });
+
+    it ("maps operator to (operator)", function () {
+      Token.arityMap.operator.should.eql('(operator)');
+    });
+
+    it ("maps eol to (eol)", function () {
+      Token.arityMap.eol.should.eql('(eol)');
+    });
+
+    it ("maps skip to (skip)", function () {
+      Token.arityMap.skip.should.eql('(skip)');
+    });
+  });
+
   describe ("create", function () {
 
     it ("returns a cloned token instance", function () {
@@ -18,13 +48,17 @@ describe ("Token", function () {
       var token = Token.create("number", 23);
       token. type.  should. eql ( "number" );
       token. value. should. eql ( 23       );
-      should.not.exist(token.arity);
     });
 
     it ("accepts an optional arity", function () {
       var token = Token.create("number", 23, '(literal)');
       token. arity.  should. eql ( "(literal)" );
     })
+
+    it ("sets arity if none is provided", function () {
+      var t1 = Token.create("name", "foo");
+      t1. arity.  should. eql ( "(name)" );
+    });
   });
 
   describe ("pos", function () {

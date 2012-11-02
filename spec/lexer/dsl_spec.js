@@ -13,10 +13,6 @@ describe ("Lexer DSL", function () {
       lexer.name(/abc/).name.should.eql("name");
     })
 
-    it ("returns a rule with arity '(literal)'", function () {
-      lexer.name(/abc/).arity.should.eql("(literal)");
-    })
-
     it ("returns a rule with the passed in regex", function () {
       lexer.regex(/abc/).regex.should.eql("^(abc)");
     })
@@ -25,10 +21,6 @@ describe ("Lexer DSL", function () {
   describe ("number", function () {
     it ("returns a rule with name 'number'", function () {
       lexer.number(/abc/).name.should.eql("number");
-    })
-
-    it ("returns a rule with arity '(literal)'", function () {
-      lexer.number(/abc/).arity.should.eql("(literal)");
     })
 
     it ("returns a rule with the passed in regex", function () {
@@ -41,10 +33,6 @@ describe ("Lexer DSL", function () {
       lexer.string(/abc/).name.should.eql("string");
     })
 
-    it ("returns a rule with arity '(literal)'", function () {
-      lexer.string(/abc/).arity.should.eql("(literal)");
-    })
-
     it ("returns a rule with the passed in regex", function () {
       lexer.regex(/abc/).regex.should.eql("^(abc)");
     })
@@ -53,10 +41,6 @@ describe ("Lexer DSL", function () {
   describe ("regex", function () {
     it ("returns a rule with name 'regex'", function () {
       lexer.regex(/abc/).name.should.eql("regex");
-    })
-
-    it ("returns a rule with arity '(literal)'", function () {
-      lexer.regex(/abc/).arity.should.eql("(literal)");
     })
 
     it ("returns a rule with the passed in regex", function () {
@@ -69,10 +53,6 @@ describe ("Lexer DSL", function () {
       lexer.operator(/abc/).name.should.eql("operator");
     })
 
-    it ("returns a rule with arity '(operator)'", function () {
-      lexer.operator(/abc/).arity.should.eql("(operator)");
-    })
-
     it ("returns a rule with the passed in regex", function () {
       lexer.regex(/abc/).regex.should.eql("^(abc)");
     })
@@ -80,11 +60,7 @@ describe ("Lexer DSL", function () {
 
   describe ("eol", function () {
     it ("returns a rule with name 'operator'", function () {
-      lexer.eol(/abc/).name.should.eql("operator");
-    })
-
-    it ("returns a rule with arity '(operator)'", function () {
-      lexer.eol(/abc/).arity.should.eql("(operator)");
+      lexer.eol(/abc/).name.should.eql("eol");
     })
 
     it ("returns a rule with the passed in regex", function () {
@@ -93,7 +69,7 @@ describe ("Lexer DSL", function () {
   });
 
   describe ("skip", function () {
-    it ("returns a rule with name 'operator'", function () {
+    it ("returns a rule with name '(skip)'", function () {
       lexer.skip(/abc/).name.should.eql("(skip)");
     })
   });

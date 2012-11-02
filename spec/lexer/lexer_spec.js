@@ -36,7 +36,7 @@ describe ("Lexer", function () {
           tokens.map(function (n) { return n.value }).should.eql(['f', 'o', 'o'])
         });
 
-        it ("correctly jusitifes position information", function () {
+        it ("correctly adjusts position information", function () {
           lexer.name(/[a-z]+/, function (name) {
             return name.split('').map(function (n) {
               return this.create("name", n);
@@ -47,7 +47,7 @@ describe ("Lexer", function () {
           tokens.map(function (n) { return [n.start, n.end] }).should.eql([[0, 0], [1, 1], [2, 2]])
         });
 
-        it ('jusitifes the column', function () {
+        it ('adjusts the column', function () {
           lexer.name(/[a-z]+/, function (name) {
             return name.split('').map(function (n) {
               return this.create("name", n + '!');

@@ -24,72 +24,72 @@ describe ("Language", function () {
   describe('rule', function () {
     it("delegates to the lexer", function () {
       language.rule("operator", /[a-zA-Z]+/, helper, "(operator)");
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action, r.arity] })[0].
-        should.eql(['operator', "/^([a-zA-Z]+)/", helper, '(operator)']);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
+        should.eql(['operator', "/^([a-zA-Z]+)/", helper]);
     });
   });
 
   describe('name', function () {
     it("delegates to the lexer", function () {
       language.name(/[a-zA-Z]+/, helper);
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action, r.arity] })[0].
-        should.eql(['name', "/^([a-zA-Z]+)/", helper, '(literal)']);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
+        should.eql(['name', "/^([a-zA-Z]+)/", helper]);
     });
   });
 
   describe('number', function () {
     it("delegates to the lexer", function () {
       language.number(/[0-9]+/, helper);
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action, r.arity] })[0].
-        should.eql(['number', "/^([0-9]+)/", helper, '(literal)']);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
+        should.eql(['number', "/^([0-9]+)/", helper]);
     });
   });
 
   describe('string', function () {
     it("delegates to the lexer", function () {
       language.string(/\".+\"/, helper);
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action, r.arity] })[0].
-        should.eql(['string', '/^(\\".+\\")/', helper, '(literal)']);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
+        should.eql(['string', '/^(\\".+\\")/', helper]);
     });
   });
 
   describe('regex', function () {
     it("delegates to the lexer", function () {
       language.regex(/\/.+\//, helper);
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action, r.arity] })[0].
-        should.eql(['regex', "/^(\\/.+\\/)/", helper, '(literal)']);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
+        should.eql(['regex', "/^(\\/.+\\/)/", helper]);
     });
   });
 
   describe('operator', function () {
     it("delegates to the lexer", function () {
       language.operator(/\+/, helper);
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action, r.arity] })[0].
-        should.eql(['operator', '/^(\\+)/', helper, '(operator)']);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
+        should.eql(['operator', '/^(\\+)/', helper]);
     });
   });
 
   describe('eol', function () {
     it("delegates to the lexer", function () {
       language.eol(/\;/, helper);
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action, r.arity] })[0].
-        should.eql(['operator', '/^(\\;)/', helper, '(operator)']);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
+        should.eql(['eol', '/^(\\;)/', helper]);
     });
   });
 
   describe('skip', function () {
     it("delegates to the lexer", function () {
       language.skip(/\s+/);
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action, r.arity] })[0].
-        should.eql(['(skip)', '/^(\\s+)/', language.lexer.helpers.skip, '(skip)']);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
+        should.eql(['(skip)', '/^(\\s+)/', language.lexer.helpers.skip]);
     });
   });
 
   describe ("prefix", function () {
     it ("delegates to the lexer", function () {
       language.prefix("+");
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.arity] })[0].
-        should.eql(['operator', '+', '(operator)']);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] })[0].
+        should.eql(['operator', '+']);
     });
 
     it ("delegates to the parser", function () {
@@ -103,8 +103,8 @@ describe ("Language", function () {
   describe ("infix", function () {
     it ("delegates to the lexer", function () {
       language.infix("+", 10);
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.arity] })[0].
-        should.eql(['operator', '+', '(operator)']);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] })[0].
+        should.eql(['operator', '+']);
     });
 
     it ("delegates to the parser", function () {
@@ -119,8 +119,8 @@ describe ("Language", function () {
   describe ("infixr", function () {
     it ("delegates to the lexer", function () {
       language.infixr("+", 10);
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.arity] })[0].
-        should.eql(['operator', '+', '(operator)']);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] })[0].
+        should.eql(['operator', '+']);
     });
 
     it ("delegates to the parser", function () {
@@ -135,8 +135,8 @@ describe ("Language", function () {
   describe ("stmt", function () {
     it ("delegates to the lexer", function () {
       language.stmt("if", helper);
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.arity] })[0].
-        should.eql(['operator', 'if', '(operator)']);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] })[0].
+        should.eql(['operator', 'if']);
     });
 
     it ("delegates to the parser", function () {
@@ -162,8 +162,8 @@ describe ("Language", function () {
       var otherLang = Language.clone(function () { this.infix("+", 10); this.infix("-", 10); this.infix("*", 10) });
       language.borrow(otherLang, "+", "-")
 
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.arity] }).
-        should.eql([["operator", "+", "(operator)"], ["operator", "-", "(operator)"]]);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
+        should.eql([["operator", "+"], ["operator", "-"]]);
     });
   });
 
@@ -193,8 +193,8 @@ describe ("Language", function () {
       var otherLang = Language.clone(function () { this.infix("+", 10); this.infix("-", 10); this.infix("*", 10) });
       language.extend(otherLang);
 
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.arity] }).
-        should.eql([["operator", "+", "(operator)"], ["operator", "-", "(operator)"], ["operator", "*", "(operator)"]]);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
+        should.eql([["operator", "+"], ["operator", "-"], ["operator", "*"]]);
     });
 
     it ("copies all lexer rules from multiple languages", function () {
@@ -203,8 +203,8 @@ describe ("Language", function () {
       language.extend(otherLang1);
       language.extend(otherLang2);
 
-      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.arity] }).
-        should.eql([["operator", "+", "(operator)"], ["operator", "-", "(operator)"], ["operator", "*", "(operator)"]]);
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
+        should.eql([["operator", "+"], ["operator", "-"], ["operator", "*"]]);
     });
   });
 
