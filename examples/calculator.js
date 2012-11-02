@@ -12,7 +12,7 @@ var Calculator = elf.Language.clone(function () {
   this.infix  ( "*", 20     )
   this.infix  ( "/", 20     )
 
-  this.prefix  ("{", function (node, left) {
+  this.prefix  ("{", function (node) {
     node.value  = "block";
     node.first  = [];
 
@@ -63,7 +63,7 @@ var Calculator = elf.Language.clone(function () {
   this.eol  ( /\;/  )
 });
 
-CalcWalker = elf.Walker.clone(function () {
+Evaluator = elf.Walker.clone(function () {
   var env = elf.Object.clone({ sqrt: function (num) { return Math.sqrt(num); } });
 
   // Match unary -
@@ -137,15 +137,24 @@ CalcWalker = elf.Walker.clone(function () {
   })
 });
 
-var source = require("fs").readFileSync(__dirname + "/test.calc", 'utf8');
-var ast    = Calculator.parse(source);
+var REPL = elf.REPL.clone({
+  evaluate: function (cmd, context, filename) {
+    var ast = Calculator.parse(cmd);
+    return [ast, Evaluator.walk(ast)]
+  }
+})
 
-CalcWalker.walk(ast);
+REPL.start();
 
-console.log("\n\nAST:\n")
-console.log('  ' + ast.toSexp().replace(/\n/g, '\n  '));
+// var source = require("fs").readFileSync(__dirname + "/test.calc", 'utf8');
+// var ast    = Calculator.parse(source);
 
-console.log("\n\nErrors:")
-console.log(elf.ErrorWalker.walk(ast, source) || '-');
+// Evaluator.walk(ast);
+
+// console.log("\n\nAST:\n")
+// console.log('  ' + ast.toSexp().replace(/\n/g, '\n  '));
+
+// console.log("\n\nErrors:")
+// console.log(elf.ErrorWalker.report(ast, source) || '-');
 
 // console.log(JSON.stringify(ast.nodes, null, '  '))
