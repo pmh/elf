@@ -3,31 +3,39 @@ var should = require( "should"     );
 
 describe ("elf", function () {
   
-  it ("defines Object", function () {
+  it ("exposes Object", function () {
     should.exist(elf.Object);
   });
 
-  it ("defines Lexer", function () {
+  it ("exposes Token", function () {
+    should.exist(elf.Token);
+  });
+
+  it ("exposes ErrorToken", function () {
+    should.exist(elf.ErrorToken);
+  });
+
+  it ("exposes Lexer", function () {
     should.exist(elf.Lexer);
   });
 
-  it ("defines Parser", function () {
+  it ("exposes Parser", function () {
     should.exist(elf.Parser);
   });
 
-  it ("defines Language", function () {
+  it ("exposes Language", function () {
     should.exist(elf.Language);
   });
 
-  it ("defines REPL", function () {
+  it ("exposes REPL", function () {
     should.exist(elf.REPL);
   });
 
-  it ("defines Walker", function () {
+  it ("exposes Walker", function () {
     should.exist(elf.Walker);
   });
 
-  it ("defines ErrorWalker", function () {
+  it ("exposes ErrorWalker", function () {
     should.exist(elf.ErrorWalker);
   });
 
