@@ -156,5 +156,3 @@ REPL.start();
 
 // console.log("\n\nErrors:")
 // console.log(elf.ErrorWalker.report(ast, source) || '-');
-
-// console.log(JSON.stringify(ast.nodes, null, '  '))
