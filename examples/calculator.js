@@ -134,11 +134,14 @@ Evaluator = elf.Walker.clone(function () {
 });
 
 var REPL = elf.REPL.clone({
-  evaluate: function (cmd, context, filename) {
-    var ast = Calculator.parse(cmd);
-    return [ast, Evaluator.walk(ast)]
+  eval: function (cmd) {
+    var ast    = Calculator.parse(cmd);
+    var errors = elf.ErrorWalker.report(ast, cmd);
+    
+    if (errors) console.log(errors);
+    return Evaluator.walk(ast)[0];
   }
-})
+});
 
 REPL.start();
 
