@@ -53,11 +53,7 @@ var Calculator = elf.Language.clone(function () {
     return node;
   });
 
-  this.stmt ("print", function (node) {
-    node.first = this.expression();
-    node.arity = "statement";
-    return node;
-  });
+  this.stmt ("print")
 
   this.skip ( /\s+/ )
   this.eol  ( /\;/  )
