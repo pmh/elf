@@ -78,6 +78,8 @@ Interpreter.walk(ast);
 
 ### elf.Object
 
+**Provides an abstraction over JavaScript's implementation of protoypal inheritence**
+
 ```js
 var Person = elf.Object.clone(function () {
   this.greet = function (person, message) { console.log(this.name + " says: " + message + ' ' + person.name + '!'); }
@@ -100,8 +102,6 @@ patrik.describe();
 console.log('slots:', patrik.slots());
 ```
 
-**Provides an abstraction over JavaScript's implementation of protoypal inheritence.**
-
  - `.clone(initializer<function|object>)`
  
   	*Returns a new object whose prototype link points to the object being cloned. It accepts either a function or an object with initialization logic which will be applied to the new object.*
@@ -116,12 +116,12 @@ console.log('slots:', patrik.slots());
 
 ### elf.Token
 
+**Represents a lexical token**
+
 ```js
 var token = elf.Token.create('string', 'foo');
 token.pos({start: 0, end:3, line: 0});
 ```
-
-**Represents a lexical token.**
 
   - `.create(type, value, [arity])`
   	
@@ -328,7 +328,7 @@ console.log(ast.toSexp());
 
 ### elf.Walker
 
-**Recursively walks the AST and applies your matchers.**
+**Recursively walks the AST and applies your matchers**
 
 ```js
 var MyWalker = elf.Walker.clone(function () {
