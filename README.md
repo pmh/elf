@@ -7,6 +7,7 @@ ELF let's you create reusable and extensible programming language implementation
 ELF takes advantage of JavaScript's prototypical nature so the way you create languages is by 'cloning' existing ones can in turn be cloned by more specific ones. This, combined with the ability to mixin and borrow rules, makes it very easy to extend and compose existing languages.
 
 
+
 ## Installation
 
 	> mkdir my-lang
@@ -28,11 +29,7 @@ var Calculator = elf.Language.clone(function () {
   this.infix("*", 20)
   this.infix("/", 20)
   
-  this.stmt ("print", function (node) {
-    node.first = this.expression();
-    node.arity = "statement";
-    return node;
-  });
+  this.stmt ("print");
   
   this.skip(/\s+/)
   this.eol(";")
@@ -63,8 +60,8 @@ var Interpreter = elf.Walker.clone(function () {
   	return this.walk(left) / this.walk(right);
   })
   
-  this.match('print', function (node, first) {
-  	console.log(this.walk(first));
+  this.match('print', function (node, expression) {
+  	console.log(this.walk(expression));
   });
   
   this.match(_, function (node) {
@@ -81,6 +78,28 @@ Interpreter.walk(ast);
 
 ### elf.Object
 
+```js
+var Person = elf.Object.clone(function () {
+  this.greet = function (person, message) { console.log(this.name + " says: " + message + ' ' + person.name + '!'); }
+
+  this.init  = function () { this.name = "Anonymous" }
+});
+
+var patrik = Person.clone({name: "Patrik"});
+var anon   = Person.clone();
+
+patrik.greet(anon, "Hello");
+
+patrik.extend({age: 27}, {occupation: "Hacker"});
+patrik.describe = function () {
+  console.log("name:", this.name + ", age:", this.age + ", occupation:", this.occupation);
+};
+
+patrik.describe();
+
+console.log('slots:', patrik.slots());
+```
+
 **Provides an abstraction over JavaScript's implementation of protoypal inheritence.**
 
  - `.clone(initializer<function|object>)`
@@ -96,23 +115,51 @@ Interpreter.walk(ast);
  	*Returns an array of all it's properties.*
 
 ### elf.Token
+
+```js
+var token = elf.Token.create('string', 'foo');
+token.pos({start: 0, end:3, line: 0});
+```
+
 **Represents a lexical token.**
 
-  - `.create(type, value)`
+  - `.create(type, value, [arity])`
   	
-  	*Creates and returns a new token object from the current one with type and value set*
+  	*Creates and returns a new token object from the current one with type, value and an optional arity set*
   
+  - `.arityMap`
+
+    * A list of token type to arity mappings.
+
   - `.error(message<string>)`
   
-  	*Turns the token into an error token*
+  	*Turns the token into an error token. Returns the current token instance.*
   
   - `.pos(pos<object>)`
   	
-  	*Updates the token position*
+  	*Updates the token position. Returns the current token instance.*
 
 ### elf.Lexer
  	
 **Provides a lexer abstraction on top of which you can base your own more specific lexers**
+
+```js
+var MyLexer = elf.Lexer.clone(function () {
+  
+  this.name(/[a-zA-Z]+/)
+
+  this.operator("+")
+
+  // This is the equivalent of this.number(/\d+/)
+  this.rule("number", /\d+/, function (num) { return parseFloat(num, 10); }, "(literal)")
+
+  // this is the equivalent as this.skip(/\s+/)
+  this.rule('ws', /\s+/, function () { return null; });
+});
+
+var tokens = MyLexer.lex('foo + 3');
+console.log(tokens);
+```
 
  - `.name(match<regexp|string>, [action<function>])`
  	
@@ -142,7 +189,7 @@ Interpreter.walk(ast);
 
 	*Tells the lexer to skip anything matching the provided match object.*
 
- - `.rule(name, regex, action, arity)`
+ - `.rule(name, regex, action, [arity])`
  	
  	*A lower-level matcher that all of the previous rules are based upon.*
  
@@ -150,7 +197,19 @@ Interpreter.walk(ast);
  
  
 ### elf.Parser
+
 **Provides a parser abstraction on top of which you can base your own more specific parsers**
+
+```js
+var MyParser = elf.Parser.clone(function () {
+  this.infix("+", 10)
+  this.infix("*", 20)
+});
+
+var tokens = MyLexer.lex('2 + 4 * 4');
+var ast    = MyParser.parse(tokens);
+console.log(ast.toSexp());
+```
 
  - `.advance([id])`
  
@@ -205,6 +264,20 @@ Interpreter.walk(ast);
 
 **Provides a unified abstraction for lexers and parsers.**
 
+```js
+var MyLanguage = elf.Language.clone(function () {
+  this.number(/\d+/);
+
+  this.infix("+", 10)
+  this.infix("*", 20)
+
+  this.skip(/\s+/)
+});
+
+var ast = MyLanguage.parse('2 + 4 * 4');
+console.log(ast.toSexp());
+```
+
  - `.name(regex<regexp|string>, [action<function(token)>])`
  
  	*Creates a rule for matching identifiers based on the provided match object.*
@@ -257,18 +330,98 @@ Interpreter.walk(ast);
 
 **Recursively walks the AST and applies your matchers.**
 
+```js
+var MyWalker = elf.Walker.clone(function () {
+  this.match("+", function (node, left, right) {
+    return this.walk(left) + this.walk(right);
+  })
+
+  this.match("*", function (node, left, right) {
+    return this.walk(left) * this.walk(right);
+  })
+
+  this.match("print", function (node, right) {
+    console.log(this.walk(right));
+  })
+
+  this.match(_, function (node) {
+    return node.value;
+  })
+});
+
+var ast = MyLanguage.parse('print 2 + 4 * 4');
+MyWalker.walk(ast);
+```
+
  - `.match(match<string|number>, [pattern<array>], action<function(node, child1, child2, …, childN)>)`
  
  	*Executes the action if the type or value of the current node matches the match argument and if the provided (optional) pattern matches.*
  
- - `.walk(ast<AST|Node|Array>)`
+ - `.walk(ast<ast|node|array>)`
  
  	*Walks the ast and returns whatever your actions return.*
  	
-### elf.Walker
+### elf.ErrorWalker
 
 **Recursively walks the AST collecting error nodes.**
 
- - `.walk(ast<AST|Node|Array>)`
+```js
+var source   = 'print !!? + 4 ** 4';
+var ast      = MyLanguage.parse(source);
+var errorMsg = elf.ErrorWalker.walk(ast, source);
+
+console.log(errorMsg);
+``
+
+ - `.report(ast<ast|node|array>, source<string>)`
  
- 	*Walks the ast and generates an error report.*
+  *Walks the ast and generates an error report.*
+
+### REPL
+
+**Creates a REPL for your language**
+
+```js
+var REPL = elf.REPL.clone({
+  eval: function (cmd) {
+    var ast = Calculator.parse(cmd);
+    return Evaluator.walk(ast)[0];
+  }
+});
+
+REPL.start();
+```
+
+  - `.reader`
+    
+    *Defaults to readline.*
+
+  - `.in`
+    
+    *Defaults to process.stdin*
+
+  - `.out`
+    
+    *Defaults to process.stdout*
+
+  - `.colorize`
+    
+    *A function that colorizes the output. Defaults to a sys.inspect.*
+
+  - `.eval`
+    
+    *A function that evaluates the input, you should override this. Defaults to regular eval.*
+
+  - `.start()`
+    
+    *Kicks off the read-eval-print-loop.*
+  
+--  ***Events***
+
+  - `line`
+
+    *Triggered on every read.*
+
+  - `close`
+  
+    *Triggered just before the session ends.*
