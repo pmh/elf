@@ -371,7 +371,7 @@ var ast      = MyLanguage.parse(source);
 var errorMsg = elf.ErrorWalker.walk(ast, source);
 
 console.log(errorMsg);
-``
+```
 
  - `.report(ast<ast|node|array>, source<string>)`
  
