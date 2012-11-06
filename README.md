@@ -302,7 +302,7 @@ console.log(ast.toSexp());
  
  	*Tells the language to skip anything matching the provided match object.*
  
-  - `.stmt(id<string>, std<function(node)>);`
+ - `.stmt(id<string>, std<function(node)>);`
  
  	*Creates a rule for matching a statement. A statement can only appear at the beginning of an expression.*
  
@@ -368,7 +368,7 @@ MyWalker.walk(ast);
 ```js
 var source   = 'print !!? + 4 ** 4';
 var ast      = MyLanguage.parse(source);
-var errorMsg = elf.ErrorWalker.walk(ast, source);
+var errorMsg = elf.ErrorWalker.report(ast, source);
 
 console.log(errorMsg);
 ```
@@ -387,6 +387,10 @@ var REPL = elf.REPL.clone({
     var ast = Calculator.parse(cmd);
     return Evaluator.walk(ast)[0];
   }
+});
+
+REPL.on('exit', function () {
+  console.log('Goodbye!');
 });
 
 REPL.start();
