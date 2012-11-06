@@ -424,4 +424,4 @@ REPL.start();
 
   - `close`
   
-    *Triggered just before the session ends.*
+    *Triggered as the session ends.*
