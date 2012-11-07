@@ -73,7 +73,7 @@
 <h2>Introduction</h2>
 
 <p>ELF let's you create reusable and extensible programming language implementations in JavaScript.
-It implements abstractions for creating parsers and lexers with automatic error-recovery, easy handling of operator precedence and (basic) AST walkers with support for pattern-matching.</p>
+It implements abstractions for creating parsers and lexers with automatic error-recovery, easy handling of operator precedence and (basic) AST walkers with support for pattern-matching as well as semi-automatic, language-aware REPL's.</p>
 
 <p>ELF takes advantage of JavaScript's prototypical nature so the way you create languages is by 'cloning' existing ones can in turn be cloned by more specific ones. This, combined with the ability to mixin and borrow rules, makes it very easy to extend existing languages.</p>
 
@@ -202,21 +202,30 @@ be applied to the new object.</em></p>
 
 <p><strong>Represents a lexical token.</strong></p>
 
+<div class="editor">
+  <textarea>var elf = require('elf.js');
+var token = elf.Token.create('string', 'foo');
+token.pos({start: 0, end:3, line: 0});
+
+console.log(token);
+  </textarea>
+</div>
+<br />
 <ul>
 <li>
 <p><code>.create(type, value)</code></p>
 
-<p><em>Creates and returns a new token object from the current one with type and value set</em></p>
+<p><em>Creates and returns a new token object from the current one with type, value and an optional arity set.</em></p>
 </li>
 <li>
 <p><code>.error(message&lt;string&gt;)</code></p>
 
-<p><em>Turns the token into an error token</em></p>
+<p><em>Turns the token into an error token. Returns the current token instance.</em></p>
 </li>
 <li>
 <p><code>.pos(pos&lt;object&gt;)</code></p>
 
-<p><em>Updates the token position</em></p>
+<p><em>Updates the token position. Returns the current token instance.</em></p>
 </li>
 </ul><h3>elf.Lexer</h3>
 
@@ -281,7 +290,7 @@ console.log(tokens);
 <p><em>Tells the lexer to skip anything matching the provided match object.</em></p>
 </li>
 <li>
-<p><code>.rule(name, regex, action, arity)</code></p>
+<p><code>.rule(name, regex, action, [arity])</code></p>
 
 <p><em>A lower-level matcher that all of the previous ones are based upon.</em></p>
 
@@ -542,7 +551,7 @@ var MyLanguage = elf.Language.clone(function () {
 
 var source   = 'print !!? + 4 ** 4';
 var ast      = MyLanguage.parse(source);
-var errorMsg = elf.ErrorWalker.walk(ast, source);
+var errorMsg = elf.ErrorWalker.report(ast, source);
 
 console.log(errorMsg);
 </textarea>
@@ -551,10 +560,89 @@ console.log(errorMsg);
 
 <ul>
 <li>
-<p><code>.walk(ast&lt;AST&gt;)</code></p>
+<p><code>.report(ast&lt;ast|node|array&gt;, source&lt;string&gt;)</code></p>
 
 <p><em>Walks the ast and generates an error report.</em></p>
 </li>
+</ul>
+
+<h3>elf.REPL</h3>
+
+  <p><strong>Creates a REPL for your language.</strong></p>
+
+<div class="editor disabled">
+  <textarea>var elf = require('elf.js'), REPL;
+
+REPL = elf.REPL.clone({
+  eval: function (cmd) {
+    var ast = Calculator.parse(cmd);
+    return Evaluator.walk(ast)[0];
+  }
+});
+
+REPL.on('exit', function () {
+  console.log('Goodbye!');
+});
+
+REPL.start();
+</textarea>
+</div>
+<br />
+
+<ul>
+<li>
+<p><code>.reader</code></p>
+
+<p><em>Defaults to readline.</em></p>
+</li>
+
+<li>
+<p><code>.in</code></p>
+
+<p><em>Defaults to process.stdin.</em></p>
+</li>
+
+<li>
+<p><code>.out</code></p>
+
+<p><em>Defaults to process.stdout.</em></p>
+</li>
+
+<li>
+<p><code>.colorize</code></p>
+
+<p><em>A function that colorizes the output. Defaults to a sys.inspect.</em></p>
+</li>
+
+<li>
+<p><code>.eval</code></p>
+
+<p><em>A function that evaluates the input, you should override this. Defaults to regular eval.</em></p>
+</li>
+
+<li>
+<p><code>.start</code></p>
+
+<p><em>Kicks off the read-eval-print-loop.</em></p>
+</li>
+</ul>
+
+<p><strong>-- Events</strong></p>
+
+<ul>
+<li>
+<p><code>line</code></p>
+
+<p><em>Triggered on every read.</em></p>
+</li>
+
+
+<li>
+<p><code>.close</code></p>
+
+<p><em>Triggered as the session ends.</em></p>
+</li>
+
 </ul>
       </section>
       <footer>
@@ -600,7 +688,7 @@ console.log(errorMsg);
             // Convert all arguments to Strings (Objects will be JSONified).
             for (var i = 0; i < arguments.length; i++) {
               var value = arguments[i];
-              messages.push(typeof(value) == 'object' ? JSON.stringify(value) : String(value));
+              messages.push(typeof(value) == 'object' ? JSON.stringify(value) : String(value).replace(/\ /g, '&nbsp;').replace(/\n+/g, '<br />'));
             }
             var msg = messages.join(" ");
             res += "<br />" + msg;
@@ -616,6 +704,8 @@ console.log(errorMsg);
       var editors = document.getElementsByClassName('editor');
       for (var i = 0; i < editors.length; i++)
         createEditorFrom(editors[i]);
+
+      document.getElementsByClassName('disabled')[0].getElementsByTagName('button')[0].disabled = true;
     </script>
 
 
