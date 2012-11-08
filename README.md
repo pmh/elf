@@ -410,7 +410,7 @@ REPL.start();
 
   - `.colorize`
     
-    *A function that colorizes the output. Defaults to a sys.inspect.*
+    *A function that colorizes the output. Defaults to sys.inspect.*
 
   - `.eval`
     
