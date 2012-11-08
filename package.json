@@ -2,7 +2,7 @@
   "author": "Patrik Hedman <patrik.hedman@gmail.com>",
   "name": "elf.js",
   "description": "elf (ECMAScript Language Framework) is a DSL for creating reusable and extensible programing language implementations.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repository": {
     "type": "git", 
     "url": "https://github.com/pmh/elf.git"
