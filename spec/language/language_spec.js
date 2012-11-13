@@ -118,13 +118,13 @@ describe ("Language", function () {
 
   describe ("infixr", function () {
     it ("delegates to the lexer", function () {
-      language.infixr("+", 10);
+      language.infixr("=", 10);
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] })[0].
-        should.eql(['operator', '+']);
+        should.eql(['operator', '=']);
     });
 
     it ("delegates to the parser", function () {
-      language.infixr("+", 10, helper);
+      language.infixr("=", 10, helper);
       
       language.parser.symbol_table.symbols["="].id.should.eql("=");
       language.parser.symbol_table.symbols["="].lbp.should.eql(10);
