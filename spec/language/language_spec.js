@@ -8,7 +8,7 @@ describe ("Language", function () {
   var language, helper;
   beforeEach(function () {
     language = Language.clone();
-    helper = function () {};
+    helper = function () { return "helper"; };
   });
 
   describe ("init", function () {
@@ -96,7 +96,7 @@ describe ("Language", function () {
       language.prefix("+", helper);
 
       language.parser.symbol_table.symbols["+"].id.should.eql("+");
-      language.parser.symbol_table.symbols["+"].nud.should.eql(helper);
+      language.parser.symbol_table.symbols["+"].nud({}).should.eql("helper");
     });
   });
 
@@ -112,7 +112,7 @@ describe ("Language", function () {
 
       language.parser.symbol_table.symbols["+"].id.should.eql("+");
       language.parser.symbol_table.symbols["+"].lbp.should.eql(10);
-      language.parser.symbol_table.symbols["+"].led.should.eql(helper);
+      language.parser.symbol_table.symbols["+"].led({}).should.eql("helper");
     });
   });
 
@@ -126,9 +126,9 @@ describe ("Language", function () {
     it ("delegates to the parser", function () {
       language.infixr("+", 10, helper);
       
-      language.parser.symbol_table.symbols["+"].id.should.eql("+");
-      language.parser.symbol_table.symbols["+"].lbp.should.eql(10);
-      language.parser.symbol_table.symbols["+"].led.should.eql(helper);
+      language.parser.symbol_table.symbols["="].id.should.eql("=");
+      language.parser.symbol_table.symbols["="].lbp.should.eql(10);
+      language.parser.symbol_table.symbols["="].led({}).should.eql("helper");
     });
   });
 
@@ -144,7 +144,7 @@ describe ("Language", function () {
       
       language.parser.symbol_table.symbols["if"].id.should.eql("if");
       language.parser.symbol_table.symbols["if"].lbp.should.eql(0);
-      language.parser.symbol_table.symbols["if"].std.should.eql(helper);
+      language.parser.symbol_table.symbols["if"].std({}).should.eql("helper");
     });
   });
 

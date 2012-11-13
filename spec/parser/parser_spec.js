@@ -8,7 +8,7 @@ describe ("Parser", function () {
     lexer  = elf.Lexer.clone(function () {
       this.name     ( /[a-z]+/  )
       this.number   ( /\d+/     )
-      this.operator ( /\+|\*/   )
+      this.operator ( /\+|\*|\=/)
       this.operator ( "return"  )
       this.skip     ( /\s+/     )
     });
@@ -26,6 +26,11 @@ describe ("Parser", function () {
       parser.prefix("+")
       parser.parse("+x", lexer).toSexp().should.eql("(+ x)")
     });
+
+    it ("set's the arity to unary by default", function () {
+      parser.prefix("+", function () {});
+      parser.parse("+x", lexer).nodes[0].arity.should.eql("unary");
+    });
   });
 
   describe ("infix", function () {
@@ -38,6 +43,24 @@ describe ("Parser", function () {
       parser.infix("+", 10)
       parser.infix("*", 20)
       parser.parse("x+y*z", lexer).toSexp().should.eql("(+ x (* y z))")
+    });
+
+    it ("set's the arity to binary by default", function () {
+      parser.infix("+", 10);
+      parser.parse("x+x", lexer).nodes[0].arity.should.eql("binary");
+    });
+  });
+
+  describe ("infixr", function () {
+    it ("parses right associative infix operators", function () {
+      parser.infix  ("+", 10)
+      parser.infixr ("=", 10)
+      parser.parse("foo=x+y", lexer).toSexp().should.eql("(= foo (+ x y))")
+    });
+
+    it ("set's the arity to binary by default", function () {
+      parser.infix("=", 10);
+      parser.parse("x=y", lexer).nodes[0].arity.should.eql("binary");
     });
   });
 
@@ -56,6 +79,10 @@ describe ("Parser", function () {
     it ("can't be part of an expression", function () {
       parser.infix("+", 10)
       parser.parse("x + return x", lexer).toSexp().should.eql("(+ x (<SyntaxError: Unexpected prefix: 'return'> x))")
+    });
+
+    it ("set's the arity to statement by default", function () {
+      parser.parse("return x", lexer).nodes[0].arity.should.eql("statement");
     });
   });
 
