@@ -10,9 +10,10 @@ describe ("Walker", function () {
   describe("process", function () {
 
     describe ("given a node and an array of patterns", function () {
-      it ("returns true if all the patterns match the relative child nodes's value, type or undefined", function () {
-        var node = {first: {value: "*"}, second: {type: "number"}, third: {value: 2}};
-        walker.process(node, ["*", "number", 2]).should.eql(true);
+      it ("returns true if all the patterns match the relative child nodes's value, type, arity or undefined", function () {
+        var node = {first: {value: "*"}, second: {type: "number"}, third: {value: 2}, forth: {arity: '(name)'}, fifth: { foo: "bar" }};
+        walker.childNames = ["first", "second", "third", "forth", "fifth"]
+        walker.process(node, ["*", "number", 2, "(name)", undefined]).should.eql(true);
       });
 
       it ("recursively resolves embedded patterns", function () {
@@ -49,10 +50,16 @@ describe ("Walker", function () {
       walker.matchers["+"].specific[0].should.eql({pattern: ["2", "2"], handler: handler});
     });
 
+    it ("uses a default handler if none is provided", function () {
+      var handler = function () { return "+ handlers"; };
+      walker.match("+");
+      walker.matchers["+"].default.handler.should.eql(walker.default);
+    });
+
     it ("does not add a default rule when a pattern is provided", function () {
       var handler = function () { return "+ handlers"; };
       walker.match("+", ["2", "2"], handler);
-      walker.matchers["+"].default.handler.should.eql(walker.default)
+      walker.matchers["+"].default.handler.should.eql(walker.error)
     });
 
     it ("does not add a specific rule when no pattern is provided", function () {
