@@ -5,14 +5,12 @@ var Calculator = elf.Language.clone(function () {
   this.name     ( /[a-zA-Z]+/  )
   this.operator ( /\||\}|\+/   )
 
-  this.prefix   ( "-"          )
+  this.prefix   ( "+", "-"     )
 
   this.infixr   ( "=", 10      )
 
-  this.infix    ( "+", 10      )
-  this.infix    ( "-", 10      )
-  this.infix    ( "*", 20      )
-  this.infix    ( "/", 20      )
+  this.infix    ( "+", "-", 10 )
+  this.infix    ( "*", "/", 20 )
 
   this.prefix   ("{", function (node) {
     node.value  = "function";
@@ -49,8 +47,13 @@ Evaluator = elf.Walker.clone(function () {
     return this.walk(left) - this.walk(right);
   })
 
+  // Match unary +
+  this.match ("+", [ _ ], function (node, left) {
+    return +this.walk(left);
+  })
+
   // Match binary +
-  this.match ("+", function (node, left, right) {
+  this.match ("+", [ _ , _ ], function (node, left, right) {
     return this.walk(left) + this.walk(right);
   })
 
@@ -112,9 +115,9 @@ var REPL = elf.REPL.clone({
   eval: function (cmd) {
     var ast    = Calculator.parse(cmd);
     var errors = elf.ErrorWalker.report(ast, cmd);
-    
     if (errors) console.log(errors);
-    return Evaluator.walk(ast).unshift();
+    var res    = Evaluator.walk(ast);
+    return res.length > 1 ? res.unshift() : res[0];
   }
 });
 
