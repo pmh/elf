@@ -1,38 +1,23 @@
 var elf = require("../index"), sys = require("sys"), _;
 
 var Calculator = elf.Language.clone(function () {
-  this.number ( /\d+/       )
-  this.name   ( /[a-zA-Z]+/ )
+  this.number   ( /\d+/        )
+  this.name     ( /[a-zA-Z]+/  )
+  this.operator ( /\||\}|\+/   )
 
-  this.prefix ( "-"         )
+  this.prefix   ( "-"          )
 
-  this.infixr ( "=", 10     )
-  this.infix  ( "+", 10     )
-  this.infix  ( "-", 10     )
-  this.infix  ( "*", 20     )
-  this.infix  ( "/", 20     )
+  this.infixr   ( "=", 10      )
 
-  this.prefix  ("{", function (node) {
-    node.value  = "block";
-    node.first  = [];
+  this.infix    ( "+", 10      )
+  this.infix    ( "-", 10      )
+  this.infix    ( "*", 20      )
+  this.infix    ( "/", 20      )
 
-    if (this.token.value === "|") this.advance("|");
-
-    if (this.tokens.peek().value === "," || this.tokens.peek().value === "|") {
-      while (true) {
-        if (this.token.value === "|") break;
-
-        var arg = this.expression();
-        arg.type = "parameter";
-        node.first.push(arg);
-        
-        this.advance(",")
-      }
-      this.advance("|");
-    }
-    
-    node.second = this.block("{", "}");
-    node.arity  = "binary";
+  this.prefix   ("{", function (node) {
+    node.value  = "function";
+    node.first  = this.parseUntil("|", { step: ",", meta: { type: "parameter" }, optional: true })
+    node.second = this.parseUntil("}");
 
     return node;
   })
@@ -40,15 +25,7 @@ var Calculator = elf.Language.clone(function () {
   this.infix  ("(", 80, function (node, first) {
     node.value  = "call";
     node.first  = first;
-    node.second = [];
-    node.arity  = "binary";
-
-    while (this.token.value !== ")" && this.token.value !== "(eof)") {
-      node.second.push(this.expression());
-      this.advance(",")
-    }
-
-    this.advance(")");
+    node.second = this.parseUntil(")", { step: "," })
 
     return node;
   });
@@ -97,28 +74,26 @@ Evaluator = elf.Walker.clone(function () {
     return this.walk(left) / this.walk(right);
   })
 
-  // Match block statements
+  // Match print statements
   this.match ("print", function (node, right) { 
     return sys.puts(this.walk(right));
   })
 
-  // Match block statements
-  this.match("block", function (node, params, body) {
+  // Match function statements
+  this.match("function", function (node, params, body) {
     var self = this;
     return function () {
       var args = arguments;
       env      = env.clone();
       params.forEach(function (param, idx) { env[self.walk(param)] = args[idx]; });
-      body.map(self.walk, self);
+      var last = body.map(self.walk, self)[body.length - 1];
       env = env.parent;
+      return last;
     }
   });
 
-  this.match ("call", [ "name" , _ ], function (node, left, right) {
-    return env[left.value].apply(null, right.map(this.walk, this));
-  });
-
-  this.match ("call", [ "block" , _ ], function (node, left, right) {
+  // Match function calls
+  this.match ("call", function (node, left, right) {
     return this.walk(left).apply(null, right.map(this.walk, this));
   });
 
@@ -139,7 +114,7 @@ var REPL = elf.REPL.clone({
     var errors = elf.ErrorWalker.report(ast, cmd);
     
     if (errors) console.log(errors);
-    return Evaluator.walk(ast)[0];
+    return Evaluator.walk(ast).unshift();
   }
 });
 
