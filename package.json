@@ -10,6 +10,9 @@
   "engines": {
     "node": "~0.8.8"
   },
+  "dependencies": {
+    "funargs": "~0.0.1"
+  },
   "devDependencies": {
     "mocha": "~1.1.0",
     "should": "~0.6.3"
