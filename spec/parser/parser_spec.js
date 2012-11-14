@@ -9,7 +9,11 @@ describe ("Parser", function () {
       this.name     ( /[a-z]+/  )
       this.number   ( /\d+/     )
       this.operator ( /\+|\*|\=/)
+      this.operator ( /\{|\}/   )
+      this.operator ( /\[|\]/   )
+      this.operator ( /\,|\|/   )
       this.operator ( "return"  )
+      this.eol      ( ";"       )
       this.skip     ( /\s+/     )
     });
   });
@@ -86,7 +90,6 @@ describe ("Parser", function () {
     });
   });
 
-
   describe ("parse", function () {
     it ("accepts a list of tokens", function () {
       parser.infix("+", 10);
@@ -132,6 +135,87 @@ describe ("Parser", function () {
     })
   });
 
+  describe ("parseUntil", function () {
+    it ("accepts a token value and keeps parsing until it finds it", function () {
+      parser.infix("+", 10)
+      parser.prefix("{", function (node) {
+        node.value  = "block"
+        node.first  = this.parseUntil("}");
+        return node;
+      });
+      parser.parse('{ 1 + 2; 3 + 4 }', lexer).toSexp().should.eql('(block [(+ 1 2), (+ 3 4)])');
+    });
+
+    it ("it stops parsing immediately when it finds the token", function () {
+      parser.infix("+", 10)
+      parser.prefix("{", function (node) {
+        node.value  = "block"
+        node.first  = this.parseUntil("}");
+        return node;
+      });
+      parser.parse('{}', lexer).toSexp().should.eql('(block [])');
+    });
+
+    it ("stops parsing and produces an error node if it encounters eof", function () {
+      parser.infix("+", 10)
+      parser.prefix("{", function (node) {
+        node.value  = "block"
+        node.first = this.parseUntil("}");
+        return node;
+      });
+      parser.parse('{ 1 + 2; 3 + 4', lexer).toSexp().should.
+        eql('(block [(+ 1 2), (+ 3 4)])\n<SyntaxError: Expected: } but got: (eof)>');
+    });
+
+    it ("accepts a map of node metadata", function () {
+      parser.infix("+", 10)
+      parser.prefix("[", function (node) {
+        node.value  = "array"
+        node.first = this.parseUntil("]", { step: ",", meta: { arrayprop: "yes" } });
+        return node;
+      });
+      parser.parse('[1 + 2, 3 + 4]', lexer).nodes[0].first.map(function (node) {
+        return node.arrayprop;
+      }).should.eql(["yes", "yes"]);
+    })
+
+    it ("accepts an optional step", function () {
+      parser.infix("+", 10)
+      parser.prefix("[", function (node) {
+        node.value  = "array"
+        node.first  = this.parseUntil("]", { step: "," });
+        return node;
+      });
+      parser.parse('[1 + 2, 3 + 4]', lexer).toSexp().should.
+        eql('(array [(+ 1 2), (+ 3 4)])');
+    });
+
+    it ("can conditionally parse", function () {
+      parser.infix("+", 10)
+      parser.prefix("{", function (node) {
+        node.value  = "block"
+        node.first  = this.parseUntil("|", { optional: true, step: "," });
+        node.second = this.parseUntil("}");
+        return node;
+      });
+
+      parser.parse('{}', lexer).toSexp().should.
+        eql('(block [] [])');
+
+      parser.parse('{x}', lexer).toSexp().should.
+        eql('(block [] [x])');
+
+      parser.parse('{x|}', lexer).toSexp().should.
+        eql('(block [x] [])');
+
+      parser.parse('{x|y}', lexer).toSexp().should.
+        eql('(block [x] [y])');
+
+      parser.parse('{x|x+2}', lexer).toSexp().should.
+        eql('(block [x] [(+ x 2)])');
+    });
+  });
+
   describe ("clone", function () {
     it ("sets up a prototypal inheritance", function () {
       var P1 = parser.clone(function () { this.infix('+', 10) });
@@ -169,5 +253,4 @@ describe ("Parser", function () {
       should.exist(parser.symbol_table.symbols["*"])
     });
   });
-
 });
