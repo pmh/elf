@@ -63,7 +63,7 @@ describe ("Token", function () {
 
   describe ("pos", function () {
     it ("sets the token position", function () {
-      var token = Token.create("number", 23, {start: 0, end: 3, line: 0});
+      var token = Token.create("number", 23);
       token.pos({start: 0, end: 3, line: 0});
 
       token. start. should. eql (0);
@@ -71,6 +71,28 @@ describe ("Token", function () {
       token. line.  should. eql (0);
     });
   });
+
+  describe ("match", function () {
+    it ("returns true if it's value matches the argument", function () {
+      var token = Token.create("name", "foo");
+      token.match("foo").should.eql(true);
+    });
+
+    it ("returns true if it's type matches the argument", function () {
+      var token = Token.create("name", "foo");
+      token.match("name").should.eql(true);
+    });
+
+    it ("returns true if it's arity matches the argument", function () {
+      var token = Token.create("name", "foo");
+      token.match("(name)").should.eql(true);
+    });
+
+    it ("accepts multiple arguments and returns true if at least one of them matches", function () {
+      var token = Token.create("name", "foo");
+      token.match("bar", "number", "foo").should.eql(true);
+    })
+  })
 
   describe ("toString", function () {
 
