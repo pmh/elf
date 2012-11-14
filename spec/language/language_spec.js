@@ -92,6 +92,14 @@ describe ("Language", function () {
         should.eql(['operator', '+']);
     });
 
+    it ("accepts variadic number of ids", function () {
+      language.prefix("+", "-")
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
+        should.eql([['operator', '+'], ['operator', '-']]);
+      language.parser.symbol_table.symbols["+"].id.should.eql("+");
+      language.parser.symbol_table.symbols["-"].id.should.eql("-");
+    })
+
     it ("delegates to the parser", function () {
       language.prefix("+", helper);
 
@@ -105,6 +113,14 @@ describe ("Language", function () {
       language.infix("+", 10);
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] })[0].
         should.eql(['operator', '+']);
+    });
+
+    it ("accepts variadic number of ids", function () {
+      language.infix("+", "-", 10)
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
+        should.eql([['operator', '+'], ['operator', '-']]);
+      language.parser.symbol_table.symbols["+"].id.should.eql("+");
+      language.parser.symbol_table.symbols["-"].id.should.eql("-");
     });
 
     it ("delegates to the parser", function () {
@@ -123,6 +139,14 @@ describe ("Language", function () {
         should.eql(['operator', '=']);
     });
 
+    it ("accepts variadic number of ids", function () {
+      language.infixr("+", "-", 10)
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
+        should.eql([['operator', '+'], ['operator', '-']]);
+      language.parser.symbol_table.symbols["+"].id.should.eql("+");
+      language.parser.symbol_table.symbols["-"].id.should.eql("-");
+    });
+
     it ("delegates to the parser", function () {
       language.infixr("=", 10, helper);
       
@@ -138,6 +162,14 @@ describe ("Language", function () {
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] })[0].
         should.eql(['operator', 'if']);
     });
+
+    it ("accepts variadic number of ids", function () {
+      language.stmt("print", "return")
+      language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
+        should.eql([['operator', 'print'], ['operator', 'return']]);
+      language.parser.symbol_table.symbols["print"].id.should.eql("print");
+      language.parser.symbol_table.symbols["return"].id.should.eql("return");
+    })
 
     it ("delegates to the parser", function () {
       language.stmt("if", helper);

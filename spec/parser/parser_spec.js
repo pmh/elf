@@ -8,10 +8,12 @@ describe ("Parser", function () {
     lexer  = elf.Lexer.clone(function () {
       this.name     ( /[a-z]+/  )
       this.number   ( /\d+/     )
-      this.operator ( /\+|\*|\=/)
+      this.operator ( /\+|\*|\-/)
       this.operator ( /\{|\}/   )
       this.operator ( /\[|\]/   )
       this.operator ( /\,|\|/   )
+      this.operator ( /\=|\+\=/ )
+      this.operator ( "print"   )
       this.operator ( "return"  )
       this.eol      ( ";"       )
       this.skip     ( /\s+/     )
@@ -31,6 +33,12 @@ describe ("Parser", function () {
       parser.parse("+x", lexer).toSexp().should.eql("(+ x)")
     });
 
+    it ("accepts variadic number of ids", function () {
+      parser.prefix("+", "-", 10)
+      parser.parse("+x", lexer).toSexp().should.eql("(+ x)")
+      parser.parse("-x", lexer).toSexp().should.eql("(- x)")
+    })
+
     it ("set's the arity to unary by default", function () {
       parser.prefix("+", function () {});
       parser.parse("+x", lexer).nodes[0].arity.should.eql("unary");
@@ -42,6 +50,11 @@ describe ("Parser", function () {
       parser.infix("+", 10)
       parser.parse("x+y", lexer).toSexp().should.eql("(+ x y)")
     });
+
+    it ("accepts variadic number of ids", function () {
+      parser.infix("+", "-", 10)
+      parser.parse("x+y-z", lexer).toSexp().should.eql("(- (+ x y) z)")
+    })
 
     it ("accepts a binding power to control operator precedence", function () {
       parser.infix("+", 10)
@@ -62,6 +75,11 @@ describe ("Parser", function () {
       parser.parse("foo=x+y", lexer).toSexp().should.eql("(= foo (+ x y))")
     });
 
+    it ("accepts variadic number of ids", function () {
+      parser.infixr("=", "+=", 10)
+      parser.parse("x=y+=z", lexer).toSexp().should.eql("(= x (+= y z))")
+    })
+
     it ("set's the arity to binary by default", function () {
       parser.infix("=", 10);
       parser.parse("x=y", lexer).nodes[0].arity.should.eql("binary");
@@ -70,7 +88,7 @@ describe ("Parser", function () {
 
   describe ("stmt", function () {
     beforeEach(function () {
-      parser.stmt("return", function (token) {
+      parser.stmt("return", "print", function (token) {
         token.first = this.expression(70);
         return token;
       })
@@ -79,6 +97,11 @@ describe ("Parser", function () {
     it ("parses statements", function () {
       parser.parse("return x", lexer).toSexp().should.eql("(return x)")
     });
+
+    it ("accepts variadic number of ids", function () {
+      parser.parse("return x", lexer).toSexp().should.eql("(return x)")
+      parser.parse("print x" , lexer).toSexp().should.eql("(print x)" )
+    })
 
     it ("can't be part of an expression", function () {
       parser.infix("+", 10)
