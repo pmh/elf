@@ -127,9 +127,9 @@ describe ("Walker", function () {
       walker.walk({value: "+", first: {value: 12}, second: {value: 1}}).should.eql(walker);
     });
 
-    it ("passes in the node and each child as arguments to handlers", function () {
-      walker.match("+", [2, 2], function (node, first, second) { return [node, first, second]; })
-      walker.match("+",         function (node, first, second) { return [node, first, second]; })
+    it ("passes in the env, node and each child as arguments to handlers", function () {
+      walker.match("+", [2, 2], function (env, node, first, second) { return [node, first, second]; })
+      walker.match("+",         function (env, node, first, second) { return [node, first, second]; })
 
       var spec = walker.walk({value: "+", first: {value: 2 }, second: {value: 2}});
       var def  = walker.walk({value: "+", first: {value: 12}, second: {value: 1}});
