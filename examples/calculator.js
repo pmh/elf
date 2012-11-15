@@ -3,6 +3,7 @@ var elf = require("../index"), sys = require("sys"), _;
 var Calculator = elf.Language.clone(function () {
   this.number   ( /\d+/        )
   this.name     ( /[a-zA-Z]+/  )
+  this.operator ( /\||\}|\)/)
 
   this.prefix   ( "+", "-"     )
 
@@ -18,7 +19,7 @@ var Calculator = elf.Language.clone(function () {
 
     return node;
   })
-
+  
   this.infix  ("(", 80, function (node, first) {
     node.value  = "call";
     node.first  = first;
@@ -34,89 +35,88 @@ var Calculator = elf.Language.clone(function () {
 });
 
 Evaluator = elf.Walker.clone(function () {
-  var env = elf.Object.clone({ sqrt: function (num) { return Math.sqrt(num); } });
 
   // Match unary -
-  this.match ("-", [ _ ], function (node, left) {
-    return -this.walk(left);
+  this.match ("-", [ _ ], function (env, node, left) {
+    return -this.walk(left, env);
   })
 
   // Match binary -
-  this.match ("-", [ _ , _ ], function (node, left, right) {
-    return this.walk(left) - this.walk(right);
+  this.match ("-", [ _ , _ ], function (env, node, left, right) {
+    return this.walk(left, env) - this.walk(right, env);
   })
 
   // Match unary +
-  this.match ("+", [ _ ], function (node, left) {
-    return +this.walk(left);
+  this.match ("+", [ _ ], function (env, node, left) {
+    return +this.walk(left, env);
   })
 
   // Match binary +
-  this.match ("+", [ _ , _ ], function (node, left, right) {
-    return this.walk(left) + this.walk(right);
+  this.match ("+", [ _ , _ ], function (env, node, left, right) {
+    return this.walk(left, env) + this.walk(right, env);
   })
 
   // Match binary *
-  this.match ("*", function (node, left, right) {
-    return this.walk(left) * this.walk(right);
+  this.match ("*", function (env, node, left, right) {
+    return this.walk(left, env) * this.walk(right, env);
   });
 
   // Match and "optimize" binary * when the right node is 2 by turning it into a left shift
-  this.match ("*", [ _ , 2 ], function (node, left) {
-    return this.walk(left) << 1;
+  this.match ("*", [ _ , 2 ], function (env, node, left) {
+    return this.walk(left, env) << 1;
   });
 
   // Match binary =
-  this.match ("=", [ "name", _ ], function (node, left, right) {
-    return env[left.value] = this.walk(right);
+  this.match ("=", [ "name", _ ], function (env, node, left, right) {
+    env[left.value] = 2;
+    return env[left.value] = this.walk(right, env);
   });
 
   // Match binary /
-  this.match ("/", function (node, left, right) {
-    return this.walk(left) / this.walk(right);
+  this.match ("/", function (env, node, left, right) {
+    return this.walk(left, env) / this.walk(right, env);
   })
 
   // Match print statements
-  this.match ("print", function (node, right) { 
-    return sys.puts(this.walk(right));
+  this.match ("print", function (env, node, right) { 
+    return sys.puts(this.walk(right, env));
   })
 
   // Match function statements
-  this.match("function", function (node, params, body) {
+  this.match("function", function (env, node, params, body) {
     var self = this;
     return function () {
       var args = arguments;
-      env      = env.clone();
-      params.forEach(function (param, idx) { env[self.walk(param)] = args[idx]; });
-      var last = body.map(self.walk, self)[body.length - 1];
-      env = env.parent;
-      return last;
-    }
+      env = env.clone();
+      params.forEach(function (param, idx) { env[self.walk(param, env)] = args[idx]; }, self);
+      return self.walk(body, env).pop();
+    };
   });
 
   // Match function calls
-  this.match ("call", function (node, left, right) {
-    return this.walk(left).apply(null, right.map(this.walk, this));
+  this.match ("call", function (env, node, left, right) {
+    var res = this.walk(left, env).apply(this, this.walk(right, env));
+    return res;
   });
 
   // Match identifiers
-  this.match ("name", function (node) {
+  this.match ("name", function (env, node) {
     return env[node.value];
   });
 
   // Match anything else and return it's value
-  this.match (_, function (node) {
+  this.match (_, function (env, node) {
     return node.value;
   })
 });
 
 var REPL = elf.REPL.clone({
-  eval: function (cmd) {
+  eval: function (cmd, env) {
     var ast    = Calculator.parse(cmd);
     var errors = elf.ErrorWalker.report(ast, cmd);
     if (errors) console.log(errors);
-    var res    = Evaluator.walk(ast);
-    return res.length > 1 ? res.unshift() : res[0];
+    var res    = Evaluator.walk(ast, env);
+    return res.pop()
   }
 });
 
