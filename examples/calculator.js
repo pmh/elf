@@ -3,7 +3,6 @@ var elf = require("../index"), sys = require("sys"), _;
 var Calculator = elf.Language.clone(function () {
   this.number   ( /\d+/        )
   this.name     ( /[a-zA-Z]+/  )
-  this.operator ( /\||\}|\+/   )
 
   this.prefix   ( "+", "-"     )
 
