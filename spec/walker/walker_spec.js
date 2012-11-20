@@ -138,5 +138,48 @@ describe ("Walker", function () {
       def .map(function (el) { return el.value }).should.eql(["+", 12, 1]);
     })
   });
+  
+  describe ("extend", function () {
+    it ("copies all rules from another walker", function () {
+      var otherWalker = walker.clone(function () {
+        this.match("name"  , function () { return "name";   })
+        this.match("number", function () { return "number"; })
+      });
+      walker.extend(otherWalker)
 
+      should.exist(walker.matchers["name"])
+      should.exist(walker.matchers["number"])
+    });
+
+    it ("copies all rules from multiple walkers", function () {
+      var otherWalker = elf.Walker.clone(function () {
+        this.match("name"  , function () { return "name";   })
+      });
+      var thirdWalker = elf.Walker.clone(function () {
+        this.match("number", function () { return "number"; })
+      });
+      walker.extend(otherWalker, thirdWalker)
+
+      should.exist(walker.matchers["name"])
+      should.exist(walker.matchers["number"])
+    });
+
+    it ("should not override the catch-all rule if it isn't defined by extendees", function () {
+      walker.match(undefined, function () { return "default"; });
+      var w2 = elf.Walker.clone(function () { this.match("name", function () {}) });
+      walker.extend(w2);
+
+      walker.matchers[undefined].default.handler().should.eql("default");
+    });
+
+    it ("should not override the catch-all rule if it's explicitly defined by extendees", function () {
+      walker.match(undefined, function () { return "default"; });
+      var w2 = elf.Walker.clone(function () {
+        this.match(undefined, function () { return "default!!!!"; })
+      });
+      walker.extend(w2);
+
+      walker.matchers[undefined].default.handler().should.eql("default!!!!");
+    });
+  });
 });
