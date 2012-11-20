@@ -100,6 +100,14 @@ describe ("elf", function () {
         obj1.foo.should.eql("bar");
       });
     });
+
+    describe ("wrap", function () {
+      it ("wraps an existing method in a new one", function () {
+        var obj = elf.Object.clone({foo: function () { return 'foo'; }})
+        obj.wrap("foo", function (original) { return function () { return original() + "!!!"; } });
+        obj.foo().should.eql("foo!!!")
+      });
+    })
   });
 
   describe ("Evented", function () {
