@@ -59,6 +59,27 @@ describe ("Lexer", function () {
         })
       });
 
+      describe("when the rule already exists", function () {
+        it ("shouldn't add it again", function () {
+          lexer.rule("name"    , /foo/);
+          lexer.rule("name"    , /foo/);
+          lexer.rule("operator", ",");
+          lexer.rule("operator", ",");
+          
+          lexer.rules.length.should.eql(2);
+        });
+
+        it ("should not modify the existing one", function () {
+          var a = function () { return "a"; }
+          var b = function () { return "b"; }
+          lexer.rule('name', "a", a, "a");
+          lexer.rule('name', "a", b, "b");
+
+          var r = lexer.rules.map(function (r) { return [r.name, r.regex, r.action, r.arity] })[0];
+          r.should.eql(["name", 'a', a, 'a']);
+        });
+      })
+
       describe("when it returns null", function () {
         it ("throws the token away", function () {
           lexer.name(/[a-z]+/, function (name) { return null; })
