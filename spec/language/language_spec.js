@@ -260,6 +260,39 @@ describe ("Language", function () {
       });
     });
   });
+
+  describe("parseUntil", function () {
+
+    it ("should add a lexer rule for the value", function () {
+      var lang = Language.clone()
+      lang.name(/[a-z]+/)
+      lang.infix("(", 80, function (node, left) {
+        node.first  = left;
+        node.second = this.parseUntil(")");
+        return node;
+      });
+
+      lang.parse("foo(abc)");
+      var rule = lang.lexer.rules[2];
+      rule.name.should.eql("operator");
+      rule.regex.should.eql(")");
+    });
+
+    it ("should add lexer rule for the step argument", function () {
+      var lang = Language.clone(function () {
+        this.name(/[a-zA-Z]+/)
+        this.infix("(", 80, function (node, left) {
+          node.first  = left;
+          node.second = this.parseUntil(")", {step: ","});
+          return node;
+        });
+      })
+
+      lang.parse("foo(abc,efg)");
+      var rule = lang.lexer.rules[3];
+      rule.name.should.eql("operator");
+      rule.regex.should.eql(",");
+    })
   })
 
   describe ("parse", function () {
