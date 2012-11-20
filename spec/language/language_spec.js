@@ -240,6 +240,28 @@ describe ("Language", function () {
     });
   });
 
+  describe("advance", function () {
+    beforeEach(function () {
+      language.parser.token  = {match : function () { return true; }}
+      language.parser.tokens = {next  : function () { return { extend: function () {}, value: "+"};  }}
+    })
+    describe("with id", function () {
+      it ("should add a lexer rule", function () {
+        language.parser.advance("+")
+        language.lexer.rules[0].name.should.eql("operator");
+        language.lexer.rules[0].regex.should.eql("+")
+      });
+    });
+
+    describe("without id", function () {
+      it ("should not add a lexer rule", function () {
+        language.parser.advance()
+        language.lexer.rules.should.eql([])
+      });
+    });
+  });
+  })
+
   describe ("parse", function () {
     it ("accepts a program string as input and produces an ast as output", function () {
       language.lexer.number(/[0-9]+/);
