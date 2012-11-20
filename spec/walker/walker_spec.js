@@ -182,4 +182,15 @@ describe ("Walker", function () {
       walker.matchers[undefined].default.handler().should.eql("default!!!!");
     });
   });
+
+  describe ("clone", function () {
+    it ("should return an object with it's own set of matchers", function () {
+      var w1 = walker.clone(function () {
+        this.match("name", function () { })
+      });
+
+      should.not.exist(walker.matchers["name"])
+      should.exist(w1.matchers["name"])
+    })
+  });
 });
