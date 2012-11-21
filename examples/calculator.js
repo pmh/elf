@@ -112,6 +112,7 @@ Evaluator = elf.Walker.clone(function () {
 var REPL = elf.REPL.clone({
   eval: function (cmd, env) {
     var ast    = Calculator.parse(cmd);
+    console.log("sexp:", ast.toSexp())
     var errors = elf.ErrorWalker.report(ast, cmd);
     if (errors) console.log(errors);
     var res    = Evaluator.walk(ast, env);
