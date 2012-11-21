@@ -14,7 +14,7 @@ var Calculator = elf.Language.clone(function () {
 
   this.prefix   ("{", function (node) {
     node.value  = "function";
-    node.first  = this.parseUntil("|", { step: ",", meta: { type: "parameter" }, optional: true })
+    node.first  = this.parseUntil("|", { step: ",", meta: { type: "parameter" }, optional: true });
     node.second = this.parseUntil("}");
 
     return node;
