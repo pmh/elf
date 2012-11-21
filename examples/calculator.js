@@ -19,7 +19,7 @@ var Calculator = elf.Language.clone(function () {
 
     return node;
   })
-  
+
   this.infix  ("(", 80, function (node, first) {
     node.value  = "call";
     node.first  = first;
