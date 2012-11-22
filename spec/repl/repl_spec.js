@@ -49,8 +49,8 @@ describe ('REPL', function () {
 
     describe ("completer", function () {
       it ("should return an empty array of matches if no completions are found", function () {
-        repl.completer("f")[0].should.eql([])
-      })
+        repl.completer("f")[0].should.eql([]);
+      });
 
       it ("should return an array of matches based on the current env", function () {
         repl.env[ "split"  ] = "foo";
@@ -59,11 +59,11 @@ describe ('REPL', function () {
 
         repl.completer("spl")[0].should.eql(["split", "splice"]);
         repl.completer("f")[0].should.eql(["foo"]);
-      })
+      });
 
       it ("should return the substring that was used for matching", function () {
         repl.completer("spl")[1].should.eql("spl");
-      })
+      });
     });
   });
 });
