@@ -61,6 +61,12 @@ describe ('REPL', function () {
         repl.completer("f")[0].should.eql(["foo"]);
       });
 
+      it ("completes based on the last word of the input", function () {
+        repl.env["bar"] = "foo";
+
+        repl.completer("foo b")[0].should.eql(["bar"]);
+      })
+
       it ("should return the substring that was used for matching", function () {
         repl.completer("spl")[1].should.eql("spl");
       });
