@@ -87,7 +87,6 @@ Evaluator = elf.Walker.clone(function () {
 
   // Match binary =
   this.match ("=", [ "name", _ ], function (env, node, left, right) {
-    env[left.value] = 2;
     return env[left.value] = this.walk(right, env);
   });
 
