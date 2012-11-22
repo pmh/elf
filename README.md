@@ -2,10 +2,9 @@
 
 ## Introduction
 
-ELF let's you create reusable and extensible programming language implementations in JavaScript. It implements abstractions for creating parsers and lexers with automatic error-recovery, easy handling of operator precedence and (basic) AST walkers with support for pattern-matching.
+ELF is an experimental compiler framework which let's you create reusable and extensible programming language implementations in JavaScript. It implements abstractions for creating languages with automatic error-recovery, easy handling of operator precedence, AST walkers with (basic) pattern-matching support and REPL's.
 
-ELF takes advantage of JavaScript's prototypical nature so the way you create languages is by 'cloning' existing ones can in turn be cloned by more specific ones. This, combined with the ability to mixin and borrow rules, makes it very easy to extend and compose existing languages.
-
+It takes advantage of JavaScript's prototypical nature so the way you create languages is by 'cloning' existing ones which in turn can be cloned by more specific ones. This, combined with the ability to mixin and borrow rules, makes it very easy to extend and compose existing languages.
 
 
 ## Installation
@@ -17,61 +16,122 @@ ELF takes advantage of JavaScript's prototypical nature so the way you create la
 ## Calculator Example
 
 ```js
-var elf = require('elf.js'), _;
+var elf = require("../index"), sys = require("sys"), _;
 
 var Calculator = elf.Language.clone(function () {
-  this.number(/\d+/)
-  
-  this.prefix("-")
-  
-  this.infix("+", 10)
-  this.infix("-", 10)
-  this.infix("*", 20)
-  this.infix("/", 20)
-  
-  this.stmt ("print");
-  
-  this.skip(/\s+/)
-  this.eol(";")
-});
+  this.number   ( /\d+/        )
+  this.name     ( /[a-zA-Z]+/  )
 
-var Interpreter = elf.Walker.clone(function () {
-  this.match('-', [ _ ], function (node, right) {
-  	return -this.walk(right);
+  this.prefix   ( "+", "-"     )
+
+  this.infixr   ( "=", 10      )
+
+  this.infix    ( "+", "-", 10 )
+  this.infix    ( "*", "/", 20 )
+
+  // Match functions in the form { x, y | x + y } or { 2 + 2 }
+  this.prefix   ("{", function (node) {
+    node.value  = "function";
+    node.first  = this.parseUntil("|", { step: ",", meta: { type: "parameter" }, optional: true })
+    node.second = this.parseUntil("}");
+
+    return node;
   })
-  
-  this.match('-', [ _ , _ ], function (node, left, right) {
-  	return this.walk(left) - this.walk(right);
-  })
-  
-  this.match('+', function (node, left, right) {
-  	return this.walk(left) + this.walk(right);
-  })
-  
-  this.match('*', function (node, left, right) {
-  	return this.walk(left) * this.walk(right);
-  })
-  
-  this.match('*', [ _ , 2 ], function (node, left, right) {
-  	return this.walk(left) >> 1;
-  })
-  
-  this.match('/', function (node, left, right) {
-  	return this.walk(left) / this.walk(right);
-  })
-  
-  this.match('print', function (node, expression) {
-  	console.log(this.walk(expression));
+
+  // Match function invocations in the form foo(2, 3)
+  this.infix  ("(", 80, function (node, first) {
+    node.value  = "call";
+    node.first  = first;
+    node.second = this.parseUntil(")", { step: "," })
+
+    return node;
   });
-  
-  this.match(_, function (node) {
-  	return node.value;
+
+  this.stmt ("print")
+
+  this.skip ( /\s+/ )
+  this.eol  ( /\;/  )
+});
+
+Evaluator = elf.Walker.clone(function () {
+
+  // Match unary -
+  this.match ("-", [ _ ], function (env, node, left) {
+    return -this.walk(left, env);
+  })
+
+  // Match binary -
+  this.match ("-", [ _ , _ ], function (env, node, left, right) {
+    return this.walk(left, env) - this.walk(right, env);
+  })
+
+  // Match unary +
+  this.match ("+", [ _ ], function (env, node, left) {
+    return +this.walk(left, env);
+  })
+
+  // Match binary +
+  this.match ("+", [ _ , _ ], function (env, node, left, right) {
+    return this.walk(left, env) + this.walk(right, env);
+  })
+
+  // Match binary *
+  this.match ("*", function (env, node, left, right) {
+    return this.walk(left, env) * this.walk(right, env);
+  });
+
+  // Match and "optimize" binary * when the right node is 2 by turning it into a left shift
+  this.match ("*", [ _ , 2 ], function (env, node, left) {
+    return this.walk(left, env) << 1;
+  });
+
+  // Match binary =
+  this.match ("=", [ "name", _ ], function (env, node, left, right) {
+    env[left.value] = 2;
+    return env[left.value] = this.walk(right, env);
+  });
+
+  // Match binary /
+  this.match ("/", function (env, node, left, right) {
+    return this.walk(left, env) / this.walk(right, env);
+  })
+
+  // Match print statements
+  this.match ("print", function (env, node, right) { 
+    return sys.puts(this.walk(right, env));
+  })
+
+  // Match function statements
+  this.match("function", function (env, node, params, body) {
+    var self = this;
+    return function () {
+      var args = arguments;
+      env = env.clone();
+      params.forEach(function (param, idx) { env[self.walk(param, env)] = args[idx]; }, self);
+      return self.walk(body, env).pop();
+    };
+  });
+
+  // Match function calls
+  this.match ("call", function (env, node, left, right) {
+    var res = this.walk(left, env).apply(this, this.walk(right, env));
+    return res;
+  });
+
+  // Match identifiers
+  this.match ("name", function (env, node) {
+    return env[node.value];
+  });
+
+  // Match anything else and return it's value
+  this.match (_, function (env, node) {
+    return node.value;
   })
 });
 
-var ast = Calculator.parse('print 1 + 2 * 3;print 4-2;');
+var ast = Calculator.parse('print 1 + 2 * 3; print { x, y | x - y }(4, 2);');
 
-Interpreter.walk(ast);
+Evaluator.walk(ast);
 ```
 
 ## API
@@ -141,7 +201,9 @@ token.pos({start: 0, end:3, line: 0});
 
 ### elf.Lexer
  	
-**Provides a lexer abstraction on top of which you can base your own more specific lexers**
+**Provides a lexer abstraction on top of which you can base your own more specific lexers.
+It resolves ambiguity by always selecting the longest match and in cases where there are 
+multiple equally long matches it chooses the last one.**
 
 ```js
 var MyLexer = elf.Lexer.clone(function () {
@@ -198,7 +260,8 @@ console.log(tokens);
  
 ### elf.Parser
 
-**Provides a parser abstraction on top of which you can base your own more specific parsers**
+**Provides a parser abstraction on top of which you can base your own more specific parsers.
+It's based on Vaughan R. Pratt's "Top Down Operator Precedence" algorithm which you can read more about [here](http://hall.org.ua/halls/wizzard/pdf/Vaughan.Pratt.TDOP.pdf), [here](http://javascript.crockford.com/tdop/tdop.html), [here](http://effbot.org/zone/simple-top-down-parsing.htm), [here](http://eli.thegreenplace.net/2010/01/02/top-down-operator-precedence-parsing/) and [here](http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/).**
 
 ```js
 var MyParser = elf.Parser.clone(function () {
@@ -223,24 +286,23 @@ console.log(ast.toSexp());
  	
  	*Parses a single statement.*
  
- - `.block(openTag, closeTag)`
+ - `.parseUntil(closeTag [, opts{step<string>, meta<object>, optional<boolean>}])`
  
- 	*Parses a block of code delimited by openTag and closeTag.*
- 
+ 	*Keeps parsing statements until it encounters the closeTag.*
  	
  - `.stmt(id, std<function(node)>)`
  
  	*Creates a rule for matching a statement. A statement can only appear at the beginning of an expression.*
  
- - `.prefix(id, [nud<function(node)>])`
+ - `.prefix(id [, nud<function(node)>])`
  
  	*Creates a rule for matching prefix tokens, similar to stmt exept that it can appear multiple times in an expression.*
  
- - `.infix(id, bp, [led<function(node, left)>])`
+ - `.infix(id, bp [, led<function(node, left)>])`
  	
  	*Creates a rule for matching tokens in infix position. Can appear multiple times in an expression.*
  	
- - `.infixr(id, bp, [led<function(node, left)>])`
+ - `.infixr(id, bp [, led<function(node, left)>])`
  
  	*Like infix except that it associates to the right.*
  
@@ -379,7 +441,7 @@ console.log(errorMsg);
 
 ### REPL
 
-**Creates a REPL for your language**
+**Creates a REPL for your language with basic history and autocompletion support**
 
 ```js
 var REPL = elf.REPL.clone({
@@ -411,6 +473,10 @@ REPL.start();
   - `.colorize`
     
     *A function that colorizes the output. Defaults to sys.inspect.*
+
+  - `.completer`
+
+    *A function that returns an array containing an array of possible completions and the partial command. Defaults to looking for matches in the current environment.*
 
   - `.eval`
     
