@@ -258,6 +258,63 @@ describe ("Lexer", function () {
     });
   });
 
+  describe ("borrow", function () {
+    it ("copies specific rules from another lexer", function () {
+      var otherLexer = lexer.clone(function () {
+        this.name(/[a-z]+/);
+        this.operator("{");
+        this.rule("foo", "bar");
+      });
+      lexer.borrow(otherLexer, "name", "operator")
+
+      lexer.rules[0].name.should.eql("name");
+      lexer.rules[1].name.should.eql("operator");
+      should.not.exist(lexer.rules[2]);
+    });
+
+    it ("copies all rules under a specific name", function () {
+      var otherLexer = lexer.clone(function () {
+        this.operator("{");
+        this.operator("}");
+        this.operator("print");
+      });
+      lexer.borrow(otherLexer, "name", "operator")
+
+      lexer.rules[0].name.should.eql("operator");
+      lexer.rules[0].regex.should.eql("{");
+      lexer.rules[1].name.should.eql("operator");
+      lexer.rules[1].regex.should.eql("}");
+      lexer.rules[2].name.should.eql("operator");
+      lexer.rules[2].regex.should.eql("print");
+    });
+
+    it ("can borrow based on match string", function () {
+      var otherLexer = lexer.clone(function () {
+        this.operator("{");
+        this.operator("}");
+        this.operator("print");
+      });
+      lexer.borrow(otherLexer, "{", "}")
+
+      lexer.rules[0].regex.should.eql("{");
+      lexer.rules[1].regex.should.eql("}");
+      should.not.exist(lexer.rules[2]);
+    });
+
+    it ("can borrow based on match regex", function () {
+      var otherLexer = lexer.clone(function () {
+        this.operator(/{/);
+        this.operator(/}/);
+        this.operator(/print/);
+      });
+      lexer.borrow(otherLexer, /{/, /}/)
+
+      lexer.rules[0].regex.should.eql("^({)");
+      lexer.rules[1].regex.should.eql("^(})");
+      should.not.exist(lexer.rules[2]);
+    });
+  });
+
   describe ("Error Handling", function () {
     
 
