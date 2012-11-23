@@ -183,6 +183,22 @@ describe ("Walker", function () {
     });
   });
 
+  describe("borrow", function () {
+    
+    it ("borrows rules from another walker", function () {
+      var otherWalker = walker.clone(function () {
+        this.match("name"  , function () { return "name";   })
+        this.match("number", function () { return "number"; })
+        this.match("string", function () { return "string"; })
+      });
+      walker.borrow(otherWalker, "name", "number");
+
+      should.exist(walker.matchers.name)
+      should.exist(walker.matchers.number)
+      should.not.exist(walker.matchers.string)
+    });
+  });
+
   describe ("clone", function () {
     it ("should return an object with it's own set of matchers", function () {
       var w1 = walker.clone(function () {
