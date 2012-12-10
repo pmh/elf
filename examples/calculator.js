@@ -4,6 +4,8 @@ var Calculator = elf.Language.clone(function () {
   this.number   ( /\d+/        )
   this.name     ( /[a-zA-Z]+/  )
 
+  this.operator ( /\{|\}/      )
+
   this.prefix   ( "+", "-"     )
 
   this.infixr   ( "=", 10      )
@@ -13,15 +15,20 @@ var Calculator = elf.Language.clone(function () {
 
   this.prefix   ("{", function (node) {
     node.value  = "function";
-    node.first  = this.parseUntil("|", { step: ",", meta: { type: "parameter" }, optional: true });
+    node.first  = this.parseUntil("|", {
+      parser   : "expression",
+      abort_if : "}",
+      step     : ",",
+      meta     : { type: "parameter" }
+    });
     node.second = this.parseUntil("}");
 
     return node;
   })
 
-  this.infix  ("(", 80, function (node, first) {
+  this.infix  ("(", 80, function (node, left) {
     node.value  = "call";
-    node.first  = first;
+    node.first  = left;
     node.second = this.parseUntil(")", { step: "," })
 
     return node;
