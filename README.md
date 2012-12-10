@@ -32,7 +32,7 @@ var Calculator = elf.Language.clone(function () {
   // Match functions in the form { x, y | x + y } or { 2 + 2 }
   this.prefix   ("{", function (node) {
     node.value  = "function";
-    node.first  = this.parseUntil("|", { step: ",", meta: { type: "parameter" }, optional: true })
+    node.first  = this.parseUntil("|", { step: ",", abort_if: "}", meta: { type: "parameter" } })
     node.second = this.parseUntil("}");
 
     return node;
