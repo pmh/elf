@@ -1,4 +1,4 @@
-# ELF - ECMAScript Language Framework
+# ELF - Extensible Language Framework
 
 ## Introduction
 
