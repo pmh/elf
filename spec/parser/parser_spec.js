@@ -217,7 +217,7 @@ describe ("Parser", function () {
       parser.infix("+", 10)
       parser.prefix("{", function (node) {
         node.value  = "block"
-        node.first  = this.parseUntil("|", { optional: true, step: "," });
+        node.first  = this.parseUntil("|", { abort_if: "}", step: "," });
         node.second = this.parseUntil("}");
         return node;
       });
