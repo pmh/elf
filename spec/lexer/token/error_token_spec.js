@@ -15,7 +15,7 @@ describe ("ErrorToken", function () {
   describe ("create", function () {
     it ("sets a default type", function () {
       var errorToken = ErrorToken.create("foo");
-      errorToken.type.should.eql("error");
+      errorToken.type.should.eql("(error)");
     });
 
     it ("sets the value to the one passed in", function () {

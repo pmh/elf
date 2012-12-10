@@ -15,7 +15,7 @@ describe ("Language", function () {
     it ("assigns a parser instance", function () {
       language.parser.parent.should.eql(Parser);
     });
-    
+
     it ("assigns a lexer instance", function () {
       language.lexer.parent.should.eql(Lexer);
     });
@@ -33,7 +33,7 @@ describe ("Language", function () {
     it("delegates to the lexer", function () {
       language.name(/[a-zA-Z]+/, helper);
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
-        should.eql(['name', "/^([a-zA-Z]+)/", helper]);
+        should.eql(['(name)', "/^([a-zA-Z]+)/", helper]);
     });
   });
 
@@ -41,7 +41,7 @@ describe ("Language", function () {
     it("delegates to the lexer", function () {
       language.number(/[0-9]+/, helper);
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
-        should.eql(['number', "/^([0-9]+)/", helper]);
+        should.eql(['(number)', "/^([0-9]+)/", helper]);
     });
   });
 
@@ -49,7 +49,7 @@ describe ("Language", function () {
     it("delegates to the lexer", function () {
       language.string(/\".+\"/, helper);
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
-        should.eql(['string', '/^(\\".+\\")/', helper]);
+        should.eql(['(string)', '/^(\\".+\\")/', helper]);
     });
   });
 
@@ -57,7 +57,7 @@ describe ("Language", function () {
     it("delegates to the lexer", function () {
       language.regex(/\/.+\//, helper);
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
-        should.eql(['regex', "/^(\\/.+\\/)/", helper]);
+        should.eql(['(regex)', "/^(\\/.+\\/)/", helper]);
     });
   });
 
@@ -65,7 +65,7 @@ describe ("Language", function () {
     it("delegates to the lexer", function () {
       language.operator(/\+/, helper);
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
-        should.eql(['operator', '/^(\\+)/', helper]);
+        should.eql(['(operator)', '/^(\\+)/', helper]);
     });
   });
 
@@ -73,7 +73,7 @@ describe ("Language", function () {
     it("delegates to the lexer", function () {
       language.eol(/\;/, helper);
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString(), r.action] })[0].
-        should.eql(['eol', '/^(\\;)/', helper]);
+        should.eql(['(eol)', '/^(\\;)/', helper]);
     });
   });
 
@@ -89,13 +89,13 @@ describe ("Language", function () {
     it ("delegates to the lexer", function () {
       language.prefix("+");
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] })[0].
-        should.eql(['operator', '+']);
+        should.eql(['(operator)', '+']);
     });
 
     it ("accepts variadic number of ids", function () {
       language.prefix("+", "-")
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
-        should.eql([['operator', '+'], ['operator', '-']]);
+        should.eql([['(operator)', '+'], ['(operator)', '-']]);
       language.parser.symbol_table.symbols["+"].id.should.eql("+");
       language.parser.symbol_table.symbols["-"].id.should.eql("-");
     })
@@ -112,13 +112,13 @@ describe ("Language", function () {
     it ("delegates to the lexer", function () {
       language.infix("+", 10);
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] })[0].
-        should.eql(['operator', '+']);
+        should.eql(['(operator)', '+']);
     });
 
     it ("accepts variadic number of ids", function () {
       language.infix("+", "-", 10)
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
-        should.eql([['operator', '+'], ['operator', '-']]);
+        should.eql([['(operator)', '+'], ['(operator)', '-']]);
       language.parser.symbol_table.symbols["+"].id.should.eql("+");
       language.parser.symbol_table.symbols["-"].id.should.eql("-");
     });
@@ -136,20 +136,20 @@ describe ("Language", function () {
     it ("delegates to the lexer", function () {
       language.infixr("=", 10);
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] })[0].
-        should.eql(['operator', '=']);
+        should.eql(['(operator)', '=']);
     });
 
     it ("accepts variadic number of ids", function () {
       language.infixr("+", "-", 10)
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
-        should.eql([['operator', '+'], ['operator', '-']]);
+        should.eql([['(operator)', '+'], ['(operator)', '-']]);
       language.parser.symbol_table.symbols["+"].id.should.eql("+");
       language.parser.symbol_table.symbols["-"].id.should.eql("-");
     });
 
     it ("delegates to the parser", function () {
       language.infixr("=", 10, helper);
-      
+
       language.parser.symbol_table.symbols["="].id.should.eql("=");
       language.parser.symbol_table.symbols["="].lbp.should.eql(10);
       language.parser.symbol_table.symbols["="].led({}).should.eql("helper");
@@ -160,20 +160,20 @@ describe ("Language", function () {
     it ("delegates to the lexer", function () {
       language.stmt("if", helper);
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] })[0].
-        should.eql(['operator', 'if']);
+        should.eql(['(operator)', 'if']);
     });
 
     it ("accepts variadic number of ids", function () {
       language.stmt("print", "return")
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
-        should.eql([['operator', 'print'], ['operator', 'return']]);
+        should.eql([['(operator)', 'print'], ['(operator)', 'return']]);
       language.parser.symbol_table.symbols["print"].id.should.eql("print");
       language.parser.symbol_table.symbols["return"].id.should.eql("return");
     })
 
     it ("delegates to the parser", function () {
       language.stmt("if", helper);
-      
+
       language.parser.symbol_table.symbols["if"].id.should.eql("if");
       language.parser.symbol_table.symbols["if"].lbp.should.eql(0);
       language.parser.symbol_table.symbols["if"].std({}).should.eql("helper");
@@ -195,7 +195,7 @@ describe ("Language", function () {
       language.borrow(otherLang, "+", "-")
 
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
-        should.eql([["operator", "+"], ["operator", "-"]]);
+        should.eql([["(operator)", "+"], ["(operator)", "-"]]);
     });
   });
 
@@ -226,7 +226,7 @@ describe ("Language", function () {
       language.extend(otherLang);
 
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
-        should.eql([["operator", "+"], ["operator", "-"], ["operator", "*"]]);
+        should.eql([["(operator)", "+"], ["(operator)", "-"], ["(operator)", "*"]]);
     });
 
     it ("copies all lexer rules from multiple languages", function () {
@@ -236,7 +236,7 @@ describe ("Language", function () {
       language.extend(otherLang2);
 
       language.lexer.rules.map(function (r) { return [r.name, r.regex.toString()] }).
-        should.eql([["operator", "+"], ["operator", "-"], ["operator", "*"]]);
+        should.eql([["(operator)", "+"], ["(operator)", "-"], ["(operator)", "*"]]);
     });
   });
 
@@ -248,7 +248,7 @@ describe ("Language", function () {
     describe("with id", function () {
       it ("should add a lexer rule", function () {
         language.parser.advance("+")
-        language.lexer.rules[0].name.should.eql("operator");
+        language.lexer.rules[0].name.should.eql("(operator)");
         language.lexer.rules[0].regex.should.eql("+")
       });
     });
@@ -274,7 +274,7 @@ describe ("Language", function () {
 
       lang.parse("foo(abc)");
       var rule = lang.lexer.rules[2];
-      rule.name.should.eql("operator");
+      rule.name.should.eql("(operator)");
       rule.regex.should.eql(")");
     });
 
@@ -290,7 +290,7 @@ describe ("Language", function () {
 
       lang.parse("foo(abc,efg)");
       var rule = lang.lexer.rules[3];
-      rule.name.should.eql("operator");
+      rule.name.should.eql("(operator)");
       rule.regex.should.eql(",");
     })
   })

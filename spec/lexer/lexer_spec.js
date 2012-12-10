@@ -265,10 +265,10 @@ describe ("Lexer", function () {
         this.operator("{");
         this.rule("foo", "bar");
       });
-      lexer.borrow(otherLexer, "name", "operator")
+      lexer.borrow(otherLexer, "(name)", "(operator)")
 
-      lexer.rules[0].name.should.eql("name");
-      lexer.rules[1].name.should.eql("operator");
+      lexer.rules[0].name.should.eql("(name)");
+      lexer.rules[1].name.should.eql("(operator)");
       should.not.exist(lexer.rules[2]);
     });
 
@@ -278,13 +278,13 @@ describe ("Lexer", function () {
         this.operator("}");
         this.operator("print");
       });
-      lexer.borrow(otherLexer, "name", "operator")
+      lexer.borrow(otherLexer, "(name)", "(operator)")
 
-      lexer.rules[0].name.should.eql("operator");
+      lexer.rules[0].name.should.eql("(operator)");
       lexer.rules[0].regex.should.eql("{");
-      lexer.rules[1].name.should.eql("operator");
+      lexer.rules[1].name.should.eql("(operator)");
       lexer.rules[1].regex.should.eql("}");
-      lexer.rules[2].name.should.eql("operator");
+      lexer.rules[2].name.should.eql("(operator)");
       lexer.rules[2].regex.should.eql("print");
     });
 
@@ -316,7 +316,6 @@ describe ("Lexer", function () {
   });
 
   describe ("Error Handling", function () {
-    
 
     describe ("error", function () {
 

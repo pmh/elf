@@ -10,7 +10,7 @@ describe ("Lexer DSL", function () {
 
   describe ("name", function () {
     it ("returns a rule with name 'name'", function () {
-      lexer.name(/abc/).name.should.eql("name");
+      lexer.name(/abc/).name.should.eql("(name)");
     })
 
     it ("returns a rule with the passed in regex", function () {
@@ -20,7 +20,7 @@ describe ("Lexer DSL", function () {
 
   describe ("number", function () {
     it ("returns a rule with name 'number'", function () {
-      lexer.number(/abc/).name.should.eql("number");
+      lexer.number(/abc/).name.should.eql("(number)");
     })
 
     it ("returns a rule with the passed in regex", function () {
@@ -30,7 +30,7 @@ describe ("Lexer DSL", function () {
 
   describe ("string", function () {
     it ("returns a rule with name 'string'", function () {
-      lexer.string(/abc/).name.should.eql("string");
+      lexer.string(/abc/).name.should.eql("(string)");
     })
 
     it ("returns a rule with the passed in regex", function () {
@@ -40,7 +40,7 @@ describe ("Lexer DSL", function () {
 
   describe ("regex", function () {
     it ("returns a rule with name 'regex'", function () {
-      lexer.regex(/abc/).name.should.eql("regex");
+      lexer.regex(/abc/).name.should.eql("(regex)");
     })
 
     it ("returns a rule with the passed in regex", function () {
@@ -50,7 +50,7 @@ describe ("Lexer DSL", function () {
 
   describe ("operator", function () {
     it ("returns a rule with name 'operator'", function () {
-      lexer.operator(/abc/).name.should.eql("operator");
+      lexer.operator(/abc/).name.should.eql("(operator)");
     })
 
     it ("returns a rule with the passed in regex", function () {
@@ -60,7 +60,7 @@ describe ("Lexer DSL", function () {
 
   describe ("eol", function () {
     it ("returns a rule with name 'operator'", function () {
-      lexer.eol(/abc/).name.should.eql("eol");
+      lexer.eol(/abc/).name.should.eql("(eol)");
     })
 
     it ("returns a rule with the passed in regex", function () {

@@ -41,7 +41,7 @@ describe ("Parser", function () {
 
     it ("set's the arity to unary by default", function () {
       parser.prefix("+", function () {});
-      parser.parse("+x", lexer).nodes[0].arity.should.eql("unary");
+      parser.parse("+x", lexer).nodes[0].arity.should.eql("(unary)");
     });
   });
 
@@ -64,7 +64,7 @@ describe ("Parser", function () {
 
     it ("set's the arity to binary by default", function () {
       parser.infix("+", 10);
-      parser.parse("x+x", lexer).nodes[0].arity.should.eql("binary");
+      parser.parse("x+x", lexer).nodes[0].arity.should.eql("(binary)");
     });
   });
 
@@ -82,7 +82,7 @@ describe ("Parser", function () {
 
     it ("set's the arity to binary by default", function () {
       parser.infix("=", 10);
-      parser.parse("x=y", lexer).nodes[0].arity.should.eql("binary");
+      parser.parse("x=y", lexer).nodes[0].arity.should.eql("(binary)");
     });
   });
 
@@ -109,7 +109,7 @@ describe ("Parser", function () {
     });
 
     it ("set's the arity to statement by default", function () {
-      parser.parse("return x", lexer).nodes[0].arity.should.eql("statement");
+      parser.parse("return x", lexer).nodes[0].arity.should.eql("(statement)");
     });
   });
 

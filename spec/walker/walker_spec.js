@@ -66,7 +66,7 @@ describe ("Walker", function () {
       var handler = function () { return "+ handlers"; };
       walker.match("+", handler);
       walker.matchers["+"].specific.length.should.eql(0);
-    });    
+    });
 
     it ("adds a default rule when no pattern is provided", function () {
       var handler = function () { return "+ handlers"; };
@@ -138,17 +138,17 @@ describe ("Walker", function () {
       def .map(function (el) { return el.value }).should.eql(["+", 12, 1]);
     })
   });
-  
+
   describe ("extend", function () {
     it ("copies all rules from another walker", function () {
       var otherWalker = walker.clone(function () {
-        this.match("name"  , function () { return "name";   })
-        this.match("number", function () { return "number"; })
+        this.match("(name)"  , function () { return "name";   })
+        this.match("(number)", function () { return "number"; })
       });
       walker.extend(otherWalker)
 
-      should.exist(walker.matchers["name"])
-      should.exist(walker.matchers["number"])
+      should.exist(walker.matchers.get("(name)"))
+      should.exist(walker.matchers.get("(number)"))
     });
 
     it ("copies all rules from multiple walkers", function () {
