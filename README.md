@@ -182,7 +182,7 @@ var token = elf.Token.create('string', 'foo');
 token.pos({start: 0, end:3, line: 0});
 ```
 
-  - `.create(type, value, [arity])`
+  - `.create(type, value [, arity])`
   	
   	*Creates and returns a new token object from the current one with type, value and an optional arity set*
   
@@ -222,27 +222,27 @@ var tokens = MyLexer.lex('foo + 3');
 console.log(tokens);
 ```
 
- - `.name(match<regexp|string>, [action<function>])`
+ - `.name(match<regexp|string> [, action<function>])`
  	
  	*Creates a rule for matching identifiers based on the provided match object.*
 
- - `.number(match<regexp|string>, [action<function>])`
+ - `.number(match<regexp|string> [, action<function>])`
  	
  	*Creates a rule for matching number literals based on the provided match object.*
  
- - `.string(match<regexp|string>, [action<function>])`
+ - `.string(match<regexp|string> [, action<function>])`
  	
  	*Creates a rule for matching strings literals based on the provided match object.*
 
- - `.regex(match<regexp|string>, [action<function>])`
+ - `.regex(match<regexp|string> [, action<function>])`
  	
  	*Creates a rule for matching regex literals based on the provided match object.*
 
- - `.operator(match<regexp|string>, [action<function>])`
+ - `.operator(match<regexp|string> [, action<function>])`
  	
  	*Creates a rule for matching operators based on the provided match object.*
  
- - `.eol(match<regexp|string>, [action<function>])`
+ - `.eol(match<regexp|string> [, action<function>])`
 
 	*Creates a rule for matching end-of-line operators based on the provided match object.*
 
@@ -250,7 +250,7 @@ console.log(tokens);
 
 	*Tells the lexer to skip anything matching the provided match object.*
 
- - `.rule(name, regex, action, [arity])`
+ - `.rule(name, regex, action [, arity])`
  	
  	*A lower-level matcher that all of the previous rules are based upon.*
  
@@ -285,9 +285,9 @@ console.log(ast.toSexp());
  	
  	*Parses a single statement.*
  
- - `.parseUntil(closeTag [, opts{step<string>, meta<object>, optional<boolean>}])`
+ - `.parseUntil(closeTag [, opts{step<string>, meta<object>, abort_if<string>}])`
  
- 	*Keeps parsing statements until it encounters the closeTag.*
+ 	*Keeps parsing statements until it encounters the closeTag or aborts if it encounters the value of the optional abort_if option.*
  	
  - `.stmt(id, std<function(node)>)`
  
@@ -339,27 +339,27 @@ var ast = MyLanguage.parse('2 + 4 * 4');
 console.log(ast.toSexp());
 ```
 
- - `.name(regex<regexp|string>, [action<function(token)>])`
+ - `.name(regex<regexp|string> [, action<function(token)>])`
  
  	*Creates a rule for matching identifiers based on the provided match object.*
  
- - `.number(regex<regexp|string>, [action<function(token)>])`
+ - `.number(regex<regexp|string> [, action<function(token)>])`
  
  	*Creates a rule for matching numbers based on the provided match object.*
  
- - `.string(regex<regexp|string>, [action<function(token)>])`
+ - `.string(regex<regexp|string> [,action<function(token)>])`
 
 	*Creates a rule for matching strings based on the provided match object.*
 
- - `.regex(regex<regexp|string>, [action<function(token)>])`
+ - `.regex(regex<regexp|string> [, action<function(token)>])`
  
  	*Creates a rule for matching regular expressions based on the provided match object.*
  
- - `.eol(regex<regexp|string>, [action<function(token)>])`
+ - `.eol(regex<regexp|string> [, action<function(token)>])`
  	
  	*Creates a rule for matching end-of-line operators based on the provided match object.*
  
- - `.skip(regex<regexp|string>, [action<function(token)>])`
+ - `.skip(regex<regexp|string> [, action<function(token)>])`
  
  	*Tells the language to skip anything matching the provided match object.*
  
@@ -367,15 +367,15 @@ console.log(ast.toSexp());
  
  	*Creates a rule for matching a statement. A statement can only appear at the beginning of an expression.*
  
- - `.prefix(id<string>, [nud<function(node)>])`
+ - `.prefix(id<string> [, nud<function(node)>])`
  
  	*Creates a rule for matching prefix tokens, similar to stmt exept that it can appear multiple times in an expression.*
  	
- - `.infix(id<string>, bp<integer>, [led<function(node, left)>])`
+ - `.infix(id<string>, bp<integer> [, led<function(node, left)>])`
  	
  	*Creates a rule for matching tokens in infix position. Can appear multiple times in an expression.*
  
- - `.infixr(id<string>, bp<integer>, [led<function(node, left)>])`
+ - `.infixr(id<string>, bp<integer> [, led<function(node, left)>])`
  
  	*Like infix except that it associates to the right.*
  
@@ -414,7 +414,7 @@ var ast = MyLanguage.parse('print 2 + 4 * 4');
 MyWalker.walk(ast);
 ```
 
- - `.match(match<string|number>, [pattern<array>], action<function(node, child1, child2, …, childN)>)`
+ - `.match(match<string|number> [, pattern<array>], action<function(node, child1, child2, …, childN)>)`
  
  	*Executes the action if the type or value of the current node matches the match argument and if the provided (optional) pattern matches.*
  
