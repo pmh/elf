@@ -31,7 +31,7 @@ var Calculator = elf.Language.clone(function () {
 
   // Match functions in the form { x, y | x + y } or { 2 + 2 }
   this.prefix   ("{", function (node) {
-    node.value  = "function";
+    node.value  = "(function)";
     node.first  = this.parseUntil("|", { step: ",", abort_if: "}", meta: { type: "parameter" } })
     node.second = this.parseUntil("}");
 
@@ -40,7 +40,7 @@ var Calculator = elf.Language.clone(function () {
 
   // Match function invocations in the form foo(2, 3)
   this.infix  ("(", 80, function (node, first) {
-    node.value  = "call";
+    node.value  = "(call)";
     node.first  = first;
     node.second = this.parseUntil(")", { step: "," })
 
@@ -86,7 +86,7 @@ Evaluator = elf.Walker.clone(function () {
   });
 
   // Match binary =
-  this.match ("=", [ "name", _ ], function (env, node, left, right) {
+  this.match ("=", [ "(name)", _ ], function (env, node, left, right) {
     return env[left.value] = this.walk(right, env);
   });
 
@@ -101,7 +101,7 @@ Evaluator = elf.Walker.clone(function () {
   })
 
   // Match function statements
-  this.match("function", function (env, node, params, body) {
+  this.match("(function)", function (env, node, params, body) {
     var self = this;
     return function () {
       var args = arguments;
@@ -112,13 +112,13 @@ Evaluator = elf.Walker.clone(function () {
   });
 
   // Match function calls
-  this.match ("call", function (env, node, left, right) {
-    var res = this.walk(left, env).apply(this, this.walk(right, env));
+  this.match ("(call)", function (env, node, left, right) {
+    var res = this.walk(left, env).apply(null, this.walk(right, env));
     return res;
   });
 
   // Match identifiers
-  this.match ("name", function (env, node) {
+  this.match ("(name)", function (env, node) {
     return env[node.value];
   });
 
