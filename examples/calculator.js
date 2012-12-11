@@ -14,7 +14,7 @@ var Calculator = elf.Language.clone(function () {
   this.infix    ( "*", "/", 20 )
 
   this.prefix   ("{", function (node) {
-    node.value  = "function";
+    node.value  = "(function)";
     node.first  = this.parseUntil("|", {
       parser   : "expression",
       abort_if : "}",
@@ -27,7 +27,7 @@ var Calculator = elf.Language.clone(function () {
   })
 
   this.infix  ("(", 80, function (node, left) {
-    node.value  = "call";
+    node.value  = "(call)";
     node.first  = left;
     node.second = this.parseUntil(")", { step: "," })
 
@@ -73,7 +73,7 @@ Evaluator = elf.Walker.clone(function () {
   });
 
   // Match binary =
-  this.match ("=", [ "name", _ ], function (env, node, left, right) {
+  this.match ("=", [ "(name)", _ ], function (env, node, left, right) {
     return env[left.value] = this.walk(right, env);
   });
 
@@ -88,7 +88,7 @@ Evaluator = elf.Walker.clone(function () {
   })
 
   // Match function statements
-  this.match("function", function (env, node, params, body) {
+  this.match("(function)", function (env, node, params, body) {
     var self = this;
     return function () {
       var args = arguments;
@@ -99,13 +99,13 @@ Evaluator = elf.Walker.clone(function () {
   });
 
   // Match function calls
-  this.match ("call", function (env, node, left, right) {
-    var res = this.walk(left, env).apply(this, this.walk(right, env));
+  this.match ("(call)", function (env, node, left, right) {
+    var res = this.walk(left, env).apply(null, this.walk(right, env));
     return res;
   });
 
   // Match identifiers
-  this.match ("name", function (env, node) {
+  this.match ("(name)", function (env, node) {
     return env[node.value];
   });
 
@@ -128,14 +128,3 @@ var REPL = elf.REPL.clone({
 });
 
 REPL.start();
-
-// var source = require("fs").readFileSync(__dirname + "/test.calc", 'utf8');
-// var ast    = Calculator.parse(source);
-
-// Evaluator.walk(ast);
-
-// console.log("\n\nAST:\n")
-// console.log('  ' + ast.toSexp().replace(/\n/g, '\n  '));
-
-// console.log("\n\nErrors:")
-// console.log(elf.ErrorWalker.report(ast, source) || '-');
