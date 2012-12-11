@@ -68,14 +68,13 @@
 
       </header>
       <section>
-        <h1>ELF - ECMAScript Language Framework</h1>
+        <h1>ELF - Extensible Language Framework</h1>
 
 <h2>Introduction</h2>
 
-<p>ELF let's you create reusable and extensible programming language implementations in JavaScript.
-It implements abstractions for creating parsers and lexers with automatic error-recovery, easy handling of operator precedence and (basic) AST walkers with support for pattern-matching as well as semi-automatic, language-aware REPL's.</p>
+<p>ELF is an experimental compiler framework which let's you create reusable and extensible programming language implementations in JavaScript. It implements abstractions for creating languages with automatic error-recovery, easy handling of operator precedence, AST walkers with (basic) pattern-matching support and REPL's.</p>
 
-<p>ELF takes advantage of JavaScript's prototypical nature so the way you create languages is by 'cloning' existing ones can in turn be cloned by more specific ones. This, combined with the ability to mixin and borrow rules, makes it very easy to extend existing languages.</p>
+<p>It takes advantage of JavaScript's prototypical nature so the way you create languages is by 'cloning' existing ones which in turn can be cloned by more specific ones. This, combined with the ability to mixin and borrow rules, makes it very easy to extend and compose existing languages.</p>
 
 <h2>Installation</h2>
 
@@ -88,65 +87,121 @@ It implements abstractions for creating parsers and lexers with automatic error-
 
 <div class="editor">
 <textarea>
-var elf = require('elf.js'), _;
+  var elf = require("../index"), _;
 
 var Calculator = elf.Language.clone(function () {
-  this.number(/\d+/)
+  this.number   ( /\d+/        )
+  this.name     ( /[a-zA-Z]+/  )
 
-  this.prefix("-")
+  this.prefix   ( "+", "-"     )
 
-  this.infix("+", 10)
-  this.infix("-", 10)
-  this.infix("*", 20)
-  this.infix("/", 20)
+  this.infixr   ( "=", 10      )
 
-  this.stmt ("print", function (node) {
-    node.first = this.expression();
-    node.arity = "statement";
+  this.infix    ( "+", "-", 10 )
+  this.infix    ( "*", "/", 20 )
+
+  // Match functions in the form { x, y | x + y } or { 2 + 2 }
+  this.prefix   ("{", function (node) {
+    node.value  = "(function)";
+    node.first  = this.parseUntil("|", { step: ",", abort_if: "}", meta: { type: "parameter" } })
+    node.second = this.parseUntil("}");
+
+    return node;
+  })
+
+  // Match function invocations in the form foo(2, 3)
+  this.infix  ("(", 80, function (node, first) {
+    node.value  = "(call)";
+    node.first  = first;
+    node.second = this.parseUntil(")", { step: "," })
+
     return node;
   });
 
-  this.skip(/\s+/)
-  this.eol(";")
+  this.stmt ("print")
+
+  this.skip ( /\s+/ )
+  this.eol  ( /\;/  )
 });
 
-var Interpreter = elf.Walker.clone(function () {
-  this.match('-', [ _ ], function (node, right) {
-    return -this.walk(right);
+Evaluator = elf.Walker.clone(function () {
+
+  // Match unary -
+  this.match ("-", [ _ ], function (env, node, left) {
+    return -this.walk(left, env);
   })
 
-  this.match('-', [ _ , _ ], function (node, left, right) {
-    return this.walk(left) - this.walk(right);
+  // Match binary -
+  this.match ("-", [ _ , _ ], function (env, node, left, right) {
+    return this.walk(left, env) - this.walk(right, env);
   })
 
-  this.match('+', function (node, left, right) {
-    return this.walk(left) + this.walk(right);
+  // Match unary +
+  this.match ("+", [ _ ], function (env, node, left) {
+    return +this.walk(left, env);
   })
 
-  this.match('*', function (node, left, right) {
-    return this.walk(left) * this.walk(right);
+  // Match binary +
+  this.match ("+", [ _ , _ ], function (env, node, left, right) {
+    return this.walk(left, env) + this.walk(right, env);
   })
 
-  this.match('*', [ _ , 2 ], function (node, left, right) {
-    return this.walk(left) >> 1;
-  })
-
-  this.match('/', function (node, left, right) {
-    return this.walk(left) / this.walk(right);
-  })
-
-  this.match('print', function (node, first) {
-    console.log(this.walk(first));
+  // Match binary *
+  this.match ("*", function (env, node, left, right) {
+    return this.walk(left, env) * this.walk(right, env);
   });
 
-  this.match(_, function (node) {
+  // Match and "optimize" binary * when the right node is 2 by turning it into a left shift
+  this.match ("*", [ _ , 2 ], function (env, node, left) {
+    return this.walk(left, env) << 1;
+  });
+
+  // Match binary =
+  this.match ("=", [ "(name)", _ ], function (env, node, left, right) {
+    return env[left.value] = this.walk(right, env);
+  });
+
+  // Match binary /
+  this.match ("/", function (env, node, left, right) {
+    return this.walk(left, env) / this.walk(right, env);
+  })
+
+  // Match print statements
+  this.match ("print", function (env, node, right) { 
+    return console.log(this.walk(right, env));
+  })
+
+  // Match function statements
+  this.match("(function)", function (env, node, params, body) {
+    var self = this;
+    return function () {
+      var args = arguments;
+      env = env.clone();
+      params.forEach(function (param, idx) { env[self.walk(param, env)] = args[idx]; }, self);
+      return self.walk(body, env).pop();
+    };
+  });
+
+  // Match function calls
+  this.match ("(call)", function (env, node, left, right) {
+    var res = this.walk(left, env).apply(null, this.walk(right, env));
+    return res;
+  });
+
+  // Match identifiers
+  this.match ("(name)", function (env, node) {
+    return env[node.value];
+  });
+
+  // Match anything else and return it's value
+  this.match (_, function (env, node) {
     return node.value;
   })
 });
 
-var ast = Calculator.parse('print 1 + 2 * 3;print 4-2;');
+var ast = Calculator.parse("print 1 + 2 * 3; print { x, y | x - y }(4, 2);");
 
-Interpreter.walk(ast);
+Evaluator.walk(ast);
 </textarea>
 </div>
 
@@ -184,9 +239,7 @@ console.log('slots:', patrik.slots());
 <li>
 <p><code>.clone(initializer&lt;function|object&gt;)</code></p>
 
-<p><em>Returns a new object whose prototype link points to the object being cloned.
-It accepts either a function or an object with initialization logic which will 
-be applied to the new object.</em></p>
+<p><em>Returns a new object whose prototype link points to the object being cloned. It accepts either a function or an object with initialization logic which will be applied to the new object.</em></p>
 </li>
 <li>
 <p><code>.extend(…mixins)</code></p>
@@ -229,7 +282,7 @@ console.log(token);
 </li>
 </ul><h3>elf.Lexer</h3>
 
-<p><strong>Provides a lexer abstraction on top of which you can base your own more specific lexers</strong></p>
+<p><strong>Provides a lexer abstraction on top of which you can base your own more specific lexers. It resolves ambiguity by always selecting the longest match and in cases where there are multiple equally long matches it chooses the last one.</strong></p>
 
 <div class="editor">
   <textarea>var elf = require('elf.js');
@@ -255,32 +308,32 @@ console.log(tokens);
 
 <ul>
 <li>
-<p><code>.name(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
+<p><code>.name(match&lt;regexp|string&gt; [, action&lt;function&gt;])</code></p>
 
 <p><em>Creates a rule for matching identifiers based on the provided match object.</em></p>
 </li>
 <li>
-<p><code>.number(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
+<p><code>.number(match&lt;regexp|string&gt; [, action&lt;function&gt;])</code></p>
 
 <p><em>Creates a rule for matching number literals based on the provided match object.</em></p>
 </li>
 <li>
-<p><code>.string(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
+<p><code>.string(match&lt;regexp|string&gt; [, action&lt;function&gt;])</code></p>
 
 <p><em>Creates a rule for matching strings literals based on the provided match object.</em></p>
 </li>
 <li>
-<p><code>.regex(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
+<p><code>.regex(match&lt;regexp|string&gt; [, action&lt;function&gt;])</code></p>
 
 <p><em>Creates a rule for matching regex literals based on the provided match object.</em></p>
 </li>
 <li>
-<p><code>.operator(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
+<p><code>.operator(match&lt;regexp|string&gt; [, action&lt;function&gt;])</code></p>
 
 <p><em>Creates a rule for matching operators based on the provided match object.</em></p>
 </li>
 <li>
-<p><code>.eol(match&lt;regexp|string&gt;, [action&lt;function&gt;])</code></p>
+<p><code>.eol(match&lt;regexp|string&gt; [, action&lt;function&gt;])</code></p>
 
 <p><em>Creates a rule for matching end-of-line operators based on the provided match object.</em></p>
 </li>
@@ -290,7 +343,7 @@ console.log(tokens);
 <p><em>Tells the lexer to skip anything matching the provided match object.</em></p>
 </li>
 <li>
-<p><code>.rule(name, regex, action, [arity])</code></p>
+<p><code>.rule(name, regex, action [, arity])</code></p>
 
 <p><em>A lower-level matcher that all of the previous ones are based upon.</em></p>
 
@@ -298,7 +351,7 @@ console.log(tokens);
 </li>
 </ul><h3>elf.Parser</h3>
 
-<p><strong>Provides a parser abstraction on top of which you can base your own more specific parsers</strong></p>
+<p><strong>Provides a parser abstraction on top of which you can base your own more specific parsers. It's based on Vaughan R. Pratt's "Top Down Operator Precedence" algorithm which you can read more about <a href="http://hall.org.ua/halls/wizzard/pdf/Vaughan.Pratt.TDOP.pdf" target="_blank">here</a>, <a href=http://javascript.crockford.com/tdop/tdop.html"" target="_blank">here</a>, <a href="http://effbot.org/zone/simple-top-down-parsing.htm" target="_blank">here</a>, <a href="http://eli.thegreenplace.net/2010/01/02/top-down-operator-precedence-parsing/" target="_blank">here</a> and <a href="http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/" target="_blank">here</a>.</strong></p>
 
 <div class="editor">
   <textarea>var elf = require('elf.js');
@@ -310,7 +363,6 @@ var MyLexer = elf.Lexer.clone(function () {
 });
 
 var MyParser = elf.Parser.clone(function () {
-  
   this.infix("+", 10)
   this.infix("*", 20)
 });
@@ -339,9 +391,9 @@ console.log(ast.toSexp());
 <p><em>Parses a single statement.</em></p>
 </li>
 <li>
-<p><code>.block(openTag, closeTag)</code></p>
+<p><code>.parseUntil(closeTag [, opts{step<string>, meta<object>, abort_if<string>}])</code></p>
 
-<p><em>Parses a block of code delimited by openTag and closeTag.</em></p>
+<p><em>Keeps parsing statements until it encounters the closeTag or aborts if it encounters the value of the optional abort_if option.</em></p>
 </li>
 <li>
 <p><code>.stmt(id, std&lt;function(node)&gt;)</code></p>
@@ -349,17 +401,17 @@ console.log(ast.toSexp());
 <p><em>Creates a rule for matching a statement. A statement can only appear at the beginning of an expression.</em></p>
 </li>
 <li>
-<p><code>.prefix(id, [nud&lt;function(node)&gt;])</code></p>
+<p><code>.prefix(id [, nud&lt;function(node)&gt;])</code></p>
 
 <p><em>Creates a rule for matching prefix tokens, similar to stmt exept that it can appear multiple times in an expression.</em></p>
 </li>
 <li>
-<p><code>.infix(id, bp, [led&lt;function(node, left)&gt;])</code></p>
+<p><code>.infix(id, bp [, led&lt;function(node, left)&gt;])</code></p>
 
 <p><em>Creates a rule for matching tokens in infix position. Can appear multiple times in an expression.</em></p>
 </li>
 <li>
-<p><code>.infixr(id, bp, [led&lt;function(node, left)&gt;])</code></p>
+<p><code>.infixr(id, bp [, led&lt;function(node, left)&gt;])</code></p>
 
 <p><em>Like infix except that it associates to the right.</em></p>
 </li>
@@ -408,32 +460,32 @@ console.log(ast.toSexp());
 
 <ul>
 <li>
-<p><code>.name(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
+<p><code>.name(regex&lt;regexp|string&gt; [, action&lt;function(token)&gt;])</code></p>
 
 <p><em>Creates a rule for matching identifiers based on the provided match object.</em></p>
 </li>
 <li>
-<p><code>.number(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
+<p><code>.number(regex&lt;regexp|string&gt; [, action&lt;function(token)&gt;])</code></p>
 
 <p><em>Creates a rule for matching numbers based on the provided match object.</em></p>
 </li>
 <li>
-<p><code>.string(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
+<p><code>.string(regex&lt;regexp|string&gt; [, action&lt;function(token)&gt;])</code></p>
 
 <p><em>Creates a rule for matching strings based on the provided match object.</em></p>
 </li>
 <li>
-<p><code>.regex(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
+<p><code>.regex(regex&lt;regexp|string&gt; [, action&lt;function(token)&gt;])</code></p>
 
 <p><em>Creates a rule for matching regular expressions based on the provided match object.</em></p>
 </li>
 <li>
-<p><code>.eol(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
+<p><code>.eol(regex&lt;regexp|string&gt; [, action&lt;function(token)&gt;])</code></p>
 
 <p><em>Creates a rule for matching end-of-line operators based on the provided match object.</em></p>
 </li>
 <li>
-<p><code>.skip(regex&lt;regexp|string&gt;, [action&lt;function(token)&gt;])</code></p>
+<p><code>.skip(regex&lt;regexp|string&gt; [, action&lt;function(token)&gt;])</code></p>
 
 <p><em>Tells the language to skip anything matching the provided match object.</em></p>
 
@@ -444,17 +496,17 @@ console.log(ast.toSexp());
 
 </li>
 <li>
-<p><code>.prefix(id&lt;string&gt;, [nud&lt;function(node)&gt;])</code></p>
+<p><code>.prefix(id&lt;string&gt; [, nud&lt;function(node)&gt;])</code></p>
 
 <p><em>Creates a rule for matching prefix tokens, similar to stmt exept that it can appear multiple times in an expression.</em></p>
 </li>
 <li>
-<p><code>.infix(id&lt;string&gt;, bp&lt;integer&gt;, [led&lt;function(node, left)&gt;])</code></p>
+<p><code>.infix(id&lt;string&gt;, bp&lt;integer&gt; [, led&lt;function(node, left)&gt;])</code></p>
 
 <p><em>Creates a rule for matching tokens in infix position. Can appear multiple times in an expression.</em></p>
 </li>
 <li>
-<p><code>.infixr(id&lt;string&gt;, bp&lt;integer&gt;, [led&lt;function(node, left)&gt;])</code></p>
+<p><code>.infixr(id&lt;string&gt;, bp&lt;integer&gt; [, led&lt;function(node, left)&gt;])</code></p>
 
 <p><em>Like infix except that it associates to the right.</em></p>
 </li>
@@ -516,9 +568,9 @@ MyWalker.walk(ast);
 
 <ul>
 <li>
-<p><code>.match(match&lt;string|number&gt;, [pattern&lt;array&gt;], action&lt;function(node, child1, child2, …, childN)&gt;)</code></p>
+<p><code>.match(match&lt;string|number&gt; [, pattern&lt;array&gt;], action&lt;function(node, child1, child2, …, childN)&gt;)</code></p>
 
-<p><em>Executes the action if the type or value of the current node matches the match argument and if the provided (optional) pattern matches.</em></p>
+<p><em>Executes the action if the type or value of the current node matches the match argument and if the provided (optional) pattern.</em></p>
 </li>
 <li>
 <p><code>.walk(ast&lt;AST|Node|Array&gt;)</code></p>
