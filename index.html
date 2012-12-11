@@ -391,7 +391,7 @@ console.log(ast.toSexp());
 <p><em>Parses a single statement.</em></p>
 </li>
 <li>
-<p><code>.parseUntil(closeTag [, opts{step<string>, meta<object>, abort_if<string>}])</code></p>
+<p><code>.parseUntil(closeTag [, opts{step&lt;string&gt;, meta&lt;object&gt;, abort_if&lt;string&gt;}])</code></p>
 
 <p><em>Keeps parsing statements until it encounters the closeTag or aborts if it encounters the value of the optional abort_if option.</em></p>
 </li>
@@ -525,44 +525,54 @@ console.log(ast.toSexp());
   <p><strong>Recursively walks the AST and applies your matchers.</strong></p>
 
 <div class="editor">
-  <textarea>var elf = require('elf.js'), _;
+  <textarea>
+var elf = require("../index"), _;
 
-var MyLanguage = elf.Language.clone(function () {
-  this.number(/\d+/);
-
-  this.infix("+", 10)
-  this.infix("*", 20)
-
-  this.stmt('print', function (node) {
-    node.first = this.expression();
-    node.arity = "statment";
-    return node;
-  })
-
-  this.skip(/\s+/)
+var Calculator = elf.Language.clone(function () {
+  this.number   ( /\d+/        )
+  this.infix    ( "+", "-", 10 )
+  this.infix    ( "*", "/", 20 )
+  this.stmt     ( "print"      )
+  this.skip 	( /\s+/ 	   )
+  this.eol  	( /\;/         )
 });
 
-var MyWalker = elf.Walker.clone(function () {
-  this.match("+", function (node, left, right) {
-    return this.walk(left) + this.walk(right);
+Evaluator = elf.Walker.clone(function () {
+
+  // Match binary -
+  this.match ("-", function (env, node, left, right) {
+    return this.walk(left, env) - this.walk(right, env);
+  })
+  // Match binary +
+  this.match ("+", function (env, node, left, right) {
+    return this.walk(left, env) + this.walk(right, env);
   })
 
-  this.match("*", function (node, left, right) {
-    return this.walk(left) * this.walk(right);
-  })
+  // Match binary *
+  this.match ("*", function (env, node, left, right) {
+    return this.walk(left, env) * this.walk(right, env);
+  });
+  
+  // Match binary *
+  this.match ("/", function (env, node, left, right) {
+    return this.walk(left, env) / this.walk(right, env);
+  });
 
-  this.match("print", function (node, right) {
-    console.log(this.walk(right));
+  // Match print statements
+  this.match ("print", function (env, node, right) { 
+    return console.log(this.walk(right, env));
   })
-
-  this.match(_, function (node) {
+  
+  // Match anything else and return it's value
+  this.match (_, function (env, node) {
     return node.value;
   })
 });
 
-var ast = MyLanguage.parse('print 2 + 4 * 4');
-MyWalker.walk(ast);
-</textarea>
+var ast = Calculator.parse("print 1 + 2 * 3")
+
+Evaluator.walk(ast);
+  </textarea>
 </div>
 <br />
 
