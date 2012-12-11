@@ -439,7 +439,9 @@ require.define("/lib/runtime/core_ext.js",function(require,module,exports,__dirn
 
 require.define("/lib/runtime/object.js",function(require,module,exports,__dirname,__filename,process,global){module.exports = {
   clone: function (init) {
-    var obj = Object.create(this, { parent: {value: this, enumerable: false} });
+    var obj = Object.create(this, { 
+      parent   : {value: this,          enumerable: false}, 
+      keywords : {value: this.keywords, enumerable: false} });
 
     if (this.init) this.init.call(obj);
     if (init) {
@@ -454,7 +456,7 @@ require.define("/lib/runtime/object.js",function(require,module,exports,__dirnam
     return obj;
   },
   
-  keywords: ["extended", "init"],
+  keywords: ["cloned", "extended", "init", "keywords"],
 
   extend: function () {
     var args = Array.prototype.slice.call(arguments);
@@ -470,6 +472,10 @@ require.define("/lib/runtime/object.js",function(require,module,exports,__dirnam
     });
 
     return this;
+  },
+
+  wrap: function (name, fn) {
+    this[name] = fn.call(this, this[name]);
   },
 
   slots: function () {
@@ -514,30 +520,31 @@ require.define("/lib/lexer/token/token.js",function(require,module,exports,__dir
 
 Token = elf.Object.clone(function () {
   this.arityMap = elf.Object.clone({
-    name     : "(name)",
-    number   : "(literal)",
-    string   : "(literal)",
-    regex    : "(literal)",
-    operator : "(operator)",
-    eol      : "(eol)",
-    skip     : "(skip)"
+    "(name)"     : "(name)",
+    "(number)"   : "(literal)",
+    "(string)"   : "(literal)",
+    "(regex)"    : "(literal)",
+    "(operator)" : "(operator)",
+    "(eol)"      : "(eol)",
+    "(skip)"     : "(skip)"
   })
 
   this.create = function (type, value, arity) {
     return this.clone(function () {
-      this.type  = type;
-      this.value = value;
-      this.line  = this.line;
-      this.start = this.start;
-      this.end   = this.end;
-      this.arity = arity ? arity : this.arityMap[type];
+      this.type     = type;
+      this.value    = value;
+      this.line     = this.line;
+      this.start    = this.start;
+      this.end      = this.end;
+      this.arity    = arity ? arity : this.arityMap[type];
     });
   };
 
   this.error = function (msg) {
-    this.type    = "error";
+    this.type    = "(error)";
     this.arity   = "(error)";
     this.message = function () { return msg; };
+
     return this;
   };
 
@@ -548,6 +555,14 @@ Token = elf.Object.clone(function () {
 
     return this;
   };
+
+  this.match = function () {
+    for (var i = 0; i < arguments.length; i++)
+      if ([this.value, this.type, this.arity].indexOf(arguments[i]) !== -1)
+        return true;
+
+    return false;
+  }
 
   this.toString = function () {
     var value = typeof this.value === "string" ? ("'" + this.value + "'") : this.value;
@@ -560,6 +575,7 @@ Token = elf.Object.clone(function () {
 });
 
 module.exports = Token;
+
 });
 
 require.define("/lib/lexer/token/error_token.js",function(require,module,exports,__dirname,__filename,process,global){var Token = require("./token"), ErrorToken;
@@ -568,7 +584,7 @@ ErrorToken = Token.clone(function () {
 
   this.create = function (value) {
     return this.clone(function () {
-      this.type    = "error";
+      this.type    = "(error)";
       this.arity   = "(error)";
       this.value   = value;
       this.message = this.message
@@ -584,26 +600,19 @@ ErrorToken = Token.clone(function () {
 });
 
 module.exports = ErrorToken
+
 });
 
 require.define("/lib/lexer/lexer.js",function(require,module,exports,__dirname,__filename,process,global){var elf        = require ( "../runtime/runtime"  );
-var Rule       = require ( "./rule/rule"         );
 var Token      = require ( "./token/token"       );
 var ErrorToken = require ( "./token/error_token" );
 
 var Lexer = elf.Object.clone(function () {
   this.extend(require('./dsl'));
 
-  this.rule = function (name, regex, action, arity) {
-    var rule = Rule.create(name, regex, action, arity);
-    this.rules.push(rule);
-
-    return rule;
-  };
-
   this.error = function (value) {
     var prev  = this.tokens[this.tokens.length - 1];
-    if (prev && prev.end >= (this.column - 1) && prev.line === this.line && prev.type === "error") {
+    if (prev && prev.end >= (this.column - 1) && prev.line === this.line && prev.type === "(error)") {
       prev.value += value;
       prev.end++;
     } else {
@@ -646,7 +655,7 @@ var Lexer = elf.Object.clone(function () {
       self.column += longestMatchLength;
       if (longestMatch.match(/\n/)) {
         this.line = this.line + 1;
-        this.column = 0;
+        this.column = longestMatch.split(/\n/)[1].length
       }
 
       if (longestMatchRule.action){
@@ -705,6 +714,21 @@ var Lexer = elf.Object.clone(function () {
     return this.tokens;
   };
 
+  this.borrow = function (other) {
+    var ruleNames = [].slice.call(arguments).slice(1);
+    ruleNames.forEach(function (ruleName) {
+      var rules = other.rules.filter(function (rule) {
+        return rule.name === ruleName ||
+          (rule.regex.source ?
+           rule.regex.source === new RegExp("^(" + ruleName.source + ")").source :
+           rule.regex === ruleName);
+      });
+      rules.forEach(function (rule) {
+        this.rule(rule.name, "", rule.action, rule.arity).regex = rule.regex;
+      }, this)
+    }, this);
+  };
+
   this.init = function () {
     var self = this;
     this.column = 0;
@@ -729,6 +753,70 @@ var Lexer = elf.Object.clone(function () {
 });
 
 module.exports = Lexer;
+
+});
+
+require.define("/lib/lexer/dsl.js",function(require,module,exports,__dirname,__filename,process,global){var elf  = require ( "../runtime/runtime"  )
+  , Rule = require ( "./rule/rule"         )
+  ;
+
+var LexerDSL = elf.Object.clone({
+  rule: function (name, regex, action, arity) {
+    var newRule = Rule.create(name, regex, action, arity);
+    var rule = this.rules.filter(function (rule) {
+      return rule.name === newRule.name && rule.regex.toString() == newRule.regex.toString();
+    })[0]
+
+    if (rule) return rule
+
+    this.rules.push(newRule);
+    return newRule;
+  },
+
+  name     : function (regex, helper) {
+    return this.rule('(name)', regex, helper);
+  },
+
+  number   : function (regex, helper) {
+    return this.rule("(number)", regex, helper || this.helpers.number)
+  },
+
+  string   : function (regex, helper) {
+    return this.rule("(string)", regex, helper || this.helpers.string)
+  },
+
+  regex    : function (regex, helper) {
+    return this.rule("(regex)", regex, helper || this.helpers.regex);
+  },
+
+  operator : function (regex, helper) {
+    return this.rule("(operator)", regex, helper);
+  },
+
+  eol      : function (regex, helper) {
+    return this.rule("(eol)", regex, helper);
+  },
+
+  skip     : function (regex) {
+    return this.rule("(skip)", regex, this.helpers.skip)
+  },
+
+  helpers: {
+    skip    : function (   ) { return null;                             },
+    value   : function (val) { return function () { return val; }               },
+    trim    : function (str) { return str.trim();                       },
+    number  : function (str) { return parseFloat(str, 10);              },
+    string  : function (str) { return str.substring(1, str.length - 1); },
+    regex   : function (str) {
+      var parts = str.substring(1).split("/");
+      var regex = this.create("regex", parts[0], "(literal)");
+      regex.modifiers = parts[1];
+      return regex;
+    }
+  }
+});
+
+module.exports = LexerDSL;
 
 });
 
@@ -770,50 +858,16 @@ Rule = elf.Object.clone(function () {
 module.exports = Rule;
 });
 
-require.define("/lib/lexer/dsl.js",function(require,module,exports,__dirname,__filename,process,global){module.exports = {
-  name     : function (regex, helper) {
-    return this.rule('name', regex, helper);
-  },
-
-  number   : function (regex, helper) {
-    return this.rule("number", regex, helper || this.helpers.literal)
-  },
-
-  string   : function (regex, helper) {
-    return this.rule("string", regex, helper || this.helpers.literal)
-  },
-
-  regex    : function (regex, helper) {
-    return this.rule("regex", regex, helper || this.helpers.literal);
-  },
-
-  operator : function (regex, helper) {
-    return this.rule("operator", regex, helper);
-  },
-
-  eol      : function (regex, helper) {
-    return this.rule("eol", regex, helper || this.helpers.value("(eol)"));
-  },
-
-  skip     : function (regex) {
-    return this.rule("(skip)", regex, this.helpers.skip)
-  },
-
-  helpers: {
-    number  : function (str) { return parseFloat(str, 10);              },
-    literal : function (str) { return parseFloat(str, 10) ? parseFloat(str, 10) : str.substring(1, str.length - 1); },
-    skip    : function (   ) { return null;                             },
-    value   : function (val) { return function () { return val; }       },
-    trim    : function (str) { return str.trim();                       }
-  }
-};
-});
-
-require.define("/lib/parser/parser.js",function(require,module,exports,__dirname,__filename,process,global){var elf = require ( "../runtime/runtime" )
-  , AST = require ( "./ast"              )
+require.define("/lib/parser/parser.js",function(require,module,exports,__dirname,__filename,process,global){var elf       = require ( "../runtime/runtime" )
+  , ParserDSL = require ( "./dsl"              )
+  , ParserAPI = require ( "./api"              )
+  , AST       = require ( "./ast"              )
   ;
 
 var Parser = elf.Object.clone(function () {
+  this.extend(ParserAPI);
+  this.extend(ParserDSL)
+
   this.keywords.push("symbol_table")
   this.symbol_table = require("./symbol_table.js");
 
@@ -821,26 +875,206 @@ var Parser = elf.Object.clone(function () {
     this.symbol_table = this.symbol_table.clone();
     this.prefix( "(literal)", function (token) { return token; } );
     this.prefix( "(name)"   , function (token) { return token; } );
+
+    this.prefix ("(", function (node) {
+      var expr = this.expression();
+      this.advance(")");
+      return expr;
+    });
     this.symbol( "(error)" );
   }
 
-  this.symbol = function (id, bp) {
-    return this.symbol_table.set(id, bp);
+  this.parse = function (source, lexer) {
+    this.tokens = arguments.length === 1 ? source : lexer.lex(source);
+    this.advance();
+
+    var stmts = this.statements();
+    if (this.token.type === "(eof)") this.advance("(eof)");
+
+    return AST.create(stmts);
   };
 
-  this.advance = function (id) {
-    if (id && id !== this.token.value) {
-      this.token.type = "(error)";
-      this.token.message = function () {
-        return "Expected: " + id + " but got: " + this.value;
+  this.borrow = function (obj) {
+    var symbols = Array.prototype.slice.call(arguments, 1);
+
+    symbols.forEach(function (symbol_name) {
+      this.symbol_table.symbols[symbol_name] = obj.symbol_table.symbols[symbol_name]
+    }.bind(this));
+  };
+
+  this.extended = function (extendee) {
+    extendee.symbol_table = this.symbol_table.clone();
+  };
+
+  this._type = "Parser";
+});
+
+module.exports = Parser;
+
+});
+
+require.define("/lib/parser/dsl.js",function(require,module,exports,__dirname,__filename,process,global){var elf = require ( "../runtime/runtime" )
+  , fun = require ( "funargs"            )
+  ;
+
+var ParserDSL = elf.Object.clone({
+  stmt: function (ids, std) {
+    var args = fun(arguments)
+      , ids  = args.strings()
+      , std  = args.functions()[0]
+      ;
+
+    ids.forEach(function (id) {
+      this.symbol(id).std = function (token) {
+        token.arity = "(statement)";
+        return (std || function (token) {
+          token.first = this.expression();
+          return token;
+        }).call(this, token);
+      }
+    }, this);
+  },
+
+  prefix: function (id, nud) {
+    var args = fun(arguments)
+      , ids  = args.strings()
+      , nud  = args.functions()[0]
+      ;
+
+    ids.forEach(function (id) {
+      this.symbol(id).nud = function (token) {
+        token.arity = "(unary)";
+        return (nud || function (token) {
+          token.first = this.expression(70);
+          return token;
+        }).call(this, token);
       };
-      return this.token;
+    }, this);
+  },
+
+  infix: function (ids, bp, led) {
+    var args = fun(arguments)
+      , ids  = args.strings()
+      , bp   = args.numbers()[0]
+      , led  = args.functions()[0]
+      ;
+
+    ids.forEach(function (id) {
+      this.symbol(id, bp).led = function (token, left) {
+        token.arity = "(binary)";
+        return (led || function (token, left) {
+          token.first  = left;
+          token.second = this.expression(bp);
+          return token;
+        }).call(this, token, left);
+      }
+    }, this);
+  },
+
+  infixr: function (ids, bp, led) {
+    var args = fun(arguments)
+      , ids  = args.strings()
+      , bp   = args.numbers()[0]
+      , led  = args.functions()[0]
+      ;
+
+    ids.forEach(function (id) {
+      this.symbol(id, bp).led = function (token, left) {
+        token.arity = "(binary)";
+        return (led || function (token, left) {
+          token.first  = left;
+          token.second = this.expression(bp - 1);
+          return token;
+        }).call(this, token, left);
+      };
+    }, this);
+  },
+
+  constant: function (id, value) {
+    var sym = this.symbol(id);
+    sym.nud = function (token) {
+      token.type  = "(constant)";
+      token.arity = "(literal)";
+      return token;
+    }
+    sym.value = value;
+  }
+});
+
+module.exports = ParserDSL;
+
+});
+
+require.define("/node_modules/funargs/package.json",function(require,module,exports,__dirname,__filename,process,global){module.exports = {"main":"./index.js"}
+});
+
+require.define("/node_modules/funargs/index.js",function(require,module,exports,__dirname,__filename,process,global){exports = module.exports = require('./lib/funargs');
+});
+
+require.define("/node_modules/funargs/lib/funargs.js",function(require,module,exports,__dirname,__filename,process,global){
+var Fun = {
+
+  args: function(arguments) {
+    var args = Fun.Arguments.prototype.slice.call(arguments);
+    return args;
+  }
+
+};
+
+Fun.Arguments = function Arguments() {};
+Fun.Arguments.prototype = Array.prototype;
+
+Fun.Arguments.by_type = function(type) {
+  return function() {
+    var matching_args = [], matching_type, arg;
+
+    for (var i = 0; i < this.length; i++) {
+      arg = this[i];
+
+      if (Array.isArray(arg))
+        matching_type = (type === 'array');
+      else
+        matching_type = (arg && typeof arg === type);
+
+      if (matching_type) {
+        matching_args.push(arg);
+      }
     }
 
-    return this.token = this.symbol_table.get(this.tokens.next());
+    return matching_args;
   };
+};
 
-  this.expression = function (rbp) {
+Fun.Arguments.prototype.strings = Fun.Arguments.by_type('string');
+Fun.Arguments.prototype.numbers = Fun.Arguments.by_type('number');
+Fun.Arguments.prototype.arrays = Fun.Arguments.by_type('array');
+Fun.Arguments.prototype.objects = Fun.Arguments.by_type('object');
+Fun.Arguments.prototype.functions = Fun.Arguments.by_type('function');
+
+module.exports = Fun.args;
+
+});
+
+require.define("/lib/parser/api.js",function(require,module,exports,__dirname,__filename,process,global){var elf = require ( "../runtime/runtime" );
+
+var ParserAPI = elf.Object.clone({
+  previous: [],
+
+  symbol: function (id, bp) {
+    return this.symbol_table.set(id, bp);
+  },
+
+  advance: function (id) {
+    if (id && !this.token.match(id)) {
+      return this.token.error("Expected: " + id + " but got: " + this.token.value);
+    }
+
+    var oldToken = this.token;
+    this.token   = this.symbol_table.get(this.tokens.next());
+    return oldToken;
+  },
+
+  expression: function (rbp) {
     if (this.token.type  === "(eof)") return;
 
     rbp = rbp || 0;
@@ -853,22 +1087,47 @@ var Parser = elf.Object.clone(function () {
       left = token.led.call(this, token, left);
     }
 
-    if (this.token.value === "(eol)") this.advance("(eol)");
     return left;
-  };
+  },
 
-  this.block = function (open, close) {
-    if (this.token.value === open) this.advance(open);
-    var stmts = []
-    while (this.token.value !== close && this.token.value !== "(eof)") {
-      stmts.push(this.statement());
-      this.advance("(eol)");
+  parseUntil: function (value, opts) {
+    opts = opts || {};
+    var stmts     = [].concat(this.previous);
+    this.previous = [];
+
+    if (stmts.length === 1 && stmts[0].match(value)) return [];
+
+    while (!this.token.match(value, "(eof)")) {
+      var stmt;
+      if (this.token.match(opts.abort_if) || this.tokens.peek().match(opts.abort_if)) {
+        if (stmt) this.previous.push(stmt);
+        return stmts;
+      }
+      stmt = (opts.parser ? this[opts.parser]() : this.statement())
+      stmt = opts.validator ? opts.validator.call(this, stmt) : stmt;
+
+      if (opts.meta) {
+        for (var tag in opts.meta)
+          if (opts.meta.hasOwnProperty(tag)) stmt[tag] = opts.meta[tag];
+      }
+      stmts.push(stmt);
+      if (opts.step) {
+        if (!this.token.match(opts.step)) break;
+        this.advance(opts.step);
+      }
+
+      if (this.token.match("(eol)")) {
+        if (this.token.match(value)) break;
+        this.advance("(eol)");
+      }
     }
-    this.advance(close);
-    return stmts;
-  };
 
-  this.statement = function () {
+    this.advance(value);
+
+    return stmts;
+  },
+
+  statement: function () {
     var token = this.token;
     if (token.std) {
       this.advance();
@@ -876,95 +1135,28 @@ var Parser = elf.Object.clone(function () {
     }
 
     return this.expression();
-  };
+  },
 
-  this.statements = function () {
+  statements: function () {
     var stmts = [];
     while (this.token.type !== "(eof)") {
       var statement = this.statement()
-      if (statement)
-        stmts.push(statement);
-
+      if (statement) stmts.push(statement);
+      if (this.token.match("(eol)")) this.advance("(eol)");
       if (this.token.type  === "(eof)") break;
     }
 
     return stmts;
   }
-
-  this.parse = function (source, lexer) {
-    this.tokens = arguments.length === 1 ? source : lexer.lex(source);
-    this.advance();
-    
-    var stmts = this.statements();
-    if (this.token.type === "(eof)") this.advance("(eof)");
-
-    return AST.create(stmts);
-  };
-
-  this.stmt = function (id, std) {
-    this.symbol(id).std = std || function (node) {
-      node.first = this.expression();
-      node.arity = "statement";
-      return node;
-    };
-  };
-
-  this.prefix = function (id, nud) {
-    this.symbol(id).nud = nud || function (token) {
-      token.first  = this.expression(70);
-      token.arity  = "unary";
-      return token;
-    };
-  };
-
-  this.infix = function (id, bp, led) {
-    this.symbol(id, bp).led = led || function (token, left) {
-      token.first  = left;
-      token.second = this.expression(bp);
-      token.arity  = "binary";
-      return token;
-    };
-  };
-
-  this.infixr = function (id, bp, led) {
-    this.symbol(id, bp).led = led || function (token, left) {
-      token.first  = left;
-      token.second = this.expression(bp - 1);
-      token.arity  = "binary";
-      return token;
-    };
-  }
-
-  this.prefix ("(", function (node) {
-    var expr = this.expression();
-    this.advance(")");
-    return expr;
-  });
-
-  this.borrow = function (obj) {
-    var symbols = Array.prototype.slice.call(arguments, 1);
-
-    symbols.forEach(function (symbol_name) {
-      this.symbol_table.symbols[symbol_name] = obj.symbol_table.symbols[symbol_name]
-    }.bind(this));
-  };
-
-  this.extended = function (extendee) {
-    this.symbol_table.symbols.slots().forEach(function (symbol_name) {
-      extendee.symbol_table.symbols[symbol_name] = this.symbol_table.symbols[symbol_name]
-    }.bind(this));
-  };
-
-  this._type = "Parser";
 });
 
-module.exports = Parser;
+module.exports = ParserAPI;
+
 });
 
-require.define("/lib/parser/ast.js",function(require,module,exports,__dirname,__filename,process,global){var elf         = require ( "../runtime/runtime" );
+require.define("/lib/parser/ast.js",function(require,module,exports,__dirname,__filename,process,global){var elf = require ( "../runtime/runtime" );
 
 var AST = elf.Object.clone(function () {
-  this.ErrorWalker = require ( "../utils/error_walker" );
   this.SexpWalker  = require ( "../utils/sexp_walker" );
 
   this.create = function (nodes) {
@@ -980,104 +1172,101 @@ var AST = elf.Object.clone(function () {
 module.exports = AST;
 });
 
-require.define("/lib/utils/error_walker.js",function(require,module,exports,__dirname,__filename,process,global){var Walker = require("../walker/walker"), ErrorWalker, _;
+require.define("/lib/utils/sexp_walker.js",function(require,module,exports,__dirname,__filename,process,global){var Walker = require("../walker/walker"), SexpWalker, _;
 
-ErrorWalker = Walker.clone(function () {
-  var errors;
+SexpWalker = Walker.clone(function () {
+  this.match('error', function (env, node) {
+    var childNodes = Array.prototype.slice.call(arguments, 2);
 
-  this.match('error', function (node) {
-    var childNodes = Array.prototype.slice.call(arguments, 1), self = this;
-    this.addError(node);
-
-    childNodes.map(function (child) { return self.walk(child); });
-
-    return this;
+    if (childNodes.length)
+      return '(<SyntaxError: ' + node.message() + '> ' + this.walk(childNodes).join(' ') + ')';
+    else
+      return '<SyntaxError: ' + node.message() + '>'
   })
 
-  this.match(_, function (node) {
-    var childNodes = Array.prototype.slice.call(arguments, 1), self = this;
-    childNodes.map(function (child) { return self.walk(child); });
-
-    return this;
+  this.match(_, function (env, node) {
+    var childNodes = Array.prototype.slice.call(arguments, 2);
+    if (childNodes.length)
+      return ('(' + (typeof node.value !== "undefined" ? node.value : JSON.stringify(node)) + childNodes.map(function (child) {
+        return ' ' + (Array.isArray(child) ? '[' + this.walk(child).join(', ') + ']' : this.walk(child));
+      }, this).join('') + ')');
+    else
+      return (typeof node.value !== "undefined" ? node.value : JSON.stringify(node))
   });
+});
 
-  this.addError = function (errorNode) {
-    if (!errors[errorNode.line]) errors[errorNode.line] = [];
-    errors[errorNode.line].push({message: errorNode.message(), start: errorNode.start, end: errorNode.end});
-  }
-
-  this.report = function (nodeList, source) {
-    var report = ""
-      , lines  = (source || '').split(/\n+/);
-
-    errors = {};
-
-    this.walk(nodeList);
-
-    for (var line in errors) {
-      line = parseInt(line, 10);
-
-      report += "\n\nLine: " + (line + 1);
-      errors[line].forEach(function (err) {
-        report += "\n * " + err.message + " [" + err.start + ", " + err.end + "]";
-      });
-      if (source) {
-        var lines      = source.split(/\n+/);
-        var paddLine   = function (line) { return (line + 1) < 10 ? ('0' + (line + 1)) : (line + 1) };
-        var lineNum    = function (line) { return paddLine(line) + ":  "; }
-        var current    = lineNum(line) + lines[line];
-
-        report += "\n"
-        if (lines[line - 1]) report += '\n' + lineNum(line - 1) + lines[line - 1]
-        report += "\n" + current + "\n";
-
-        for (var i = 0; i < ((errors[line][0].start) + (lineNum(line).length)); i++) report += ' ';
-        errors[line].forEach(function (err, idx) {
-          var prevLen = idx ? errors[line][idx - 1].end : err.end;
-
-          for (var i = prevLen  ; i < err.start - 1; i++) report += " ";
-          for (var i = err.start; i <= err.end     ; i++) report += "^";
-        });
-        if (lines[line + 1]) report += '\n' + lineNum(line - 1) + lines[line + 1]
-      }
-    }
-    if (report) {
-      report = '\n------------- Errors -------------\n' + report + '\n\n----------------------------------\n';
-    }
-
-    return report;
-  }
-})
-
-module.exports = ErrorWalker;
+module.exports = SexpWalker;
 });
 
 require.define("/lib/walker/walker.js",function(require,module,exports,__dirname,__filename,process,global){var elf = require ( "../runtime/runtime" );
 
+var Matchers = elf.Object.clone({
+  clone: function () {
+    var obj = elf.Object.clone();
+    for (var prop in this) {
+      if (this.hasOwnProperty(prop) && prop !== "clone") {
+        obj[prop] = typeof this[prop] === "object" ? Object.create(this[prop]) : this[prop];
+      }
+    }
+
+    return obj;
+  },
+
+  get: function (name) {
+    if ({}.hasOwnProperty.call(this, name))
+      return this[name];
+  }
+});
+
 var Walker = elf.Object.clone(function () {
-  this.matchers   = elf.Object.clone();
   this.childNames = ["first", "second", "third"];
 
   this.init = function () {
-    this.matchers            = this.matchers.clone();
-    this.matchers[undefined] = {specific: [], default: { handler: this.default }}
-    this.childNames          = Object.create(this.childNames);
+    this.matchers = (this.matchers ? Matchers.clone.call(this.matchers) : Matchers.clone());
+    this.matchers.extend(Matchers.clone.call(this.matchers));
+    this.childNames = Object.create(this.childNames);
   }
 
-  this.default = function (node) {
+  this.extend = function (obj) {
+    var walkers = [].slice.call(arguments);
+    walkers.forEach(function (walker) {
+      for (var slot in walker) {
+        if (walker.hasOwnProperty(slot) && slot !== "matchers")
+          this[slot] = walker[slot];
+      }
+      this.extend.call(this.matchers, Matchers.clone.call(walker.matchers));
+    }, this);
+    return this;
+  }
+
+  this.borrow = function (other) {
+    var matchers = [].slice.call(arguments, 1);
+    matchers.forEach(function (matcher) {
+      this.matchers[matcher] = other.matchers[matcher];
+    }, this);
+  };
+
+  this.default = function (env, node) {
+    var childNodes = Array.prototype.slice.call(arguments, 2);
+    childNodes.forEach(function (node) { this.walk(node, env) }, this);
+
+    return node;
+  }
+
+  this.error = function (env, node) {
     return node.error("No rule found for the " + (node.type === "error" ? 'token' : node.type) + " '" + node.value + "'.");
   };
 
   this.match = function (type) {
-    if (!this.matchers[type]) this.matchers[type] = {specific: [], default: { handler: this.default }}
+    if (!this.matchers.get(type)) this.matchers[type] = {specific: [], default: { handler: this.error }}
 
     if (arguments.length === 3) {
-      this.matchers[type].specific.push({
+      this.matchers.get(type).specific.push({
         pattern : arguments[1],
-        handler : arguments[2]
+        handler : arguments[2] || this.default
       })
     } else {
-      this.matchers[type].default = { handler: arguments[1] }
+      this.matchers.get(type).default = { handler: arguments[1] || this.default }
     }
   }
 
@@ -1090,7 +1279,7 @@ var Walker = elf.Object.clone(function () {
   }
 
   this.validate = function (node, pattern) {
-    return node && (typeof pattern === "undefined" || (pattern === node.value || pattern === node.type));
+    return node && (typeof pattern === "undefined" || (pattern === node.value || pattern === node.type || pattern === node.arity));
   }
 
   this.process = function (node, patterns) {
@@ -1107,10 +1296,10 @@ var Walker = elf.Object.clone(function () {
     return matches.length === patterns.length;
   };
 
-  this.visit = function (node) {
+  this.visit = function (node, env) {
     if (!node) return;
 
-    var matcher    = this.matchers[node.value] || this.matchers[node.type] || this.matchers[undefined]
+    var matcher    = this.matchers.get(node.value) || this.matchers.get(node.type) || this.matchers.get(node.arity) || this.matchers.get(undefined) || {specific: [], default: { handler: this.error }}
       , childNames = this.childNames.filter(function (name) { return node[name]; })
       , self       = this;
 
@@ -1120,48 +1309,25 @@ var Walker = elf.Object.clone(function () {
     }, null);
 
     var args = childNames.map(function (name) { return node[name]; });
-    return (match || matcher.default.handler).apply(this, [node].concat(args));
+    return (match || matcher.default.handler).apply(this, [env, node].concat(args));
   };
 
-  this.walk = function (nodeList) {
+  this.walk = function (nodeList, env) {
     if (!nodeList) return;
+    env = env || elf.Object.clone();
+    var visit = function (node) { return this.visit(node, env); };
 
-    if (elf.helpers.isArray(nodeList.nodes)) {
-      return nodeList.nodes.map(this.visit, this);
-    } else if (elf.helpers.isArray(nodeList)) {
-      return '[' + nodeList.map(this.visit, this).join(', ') + ']'
+    if (nodeList.nodes || Array.isArray(nodeList)) {
+      return (nodeList.nodes || nodeList).map(visit, this);
     } else {
-      return this.visit(nodeList);
+      return this.visit(nodeList, env);
     }
   };
 
 });
 
 module.exports = Walker;
-});
 
-require.define("/lib/utils/sexp_walker.js",function(require,module,exports,__dirname,__filename,process,global){var Walker = require("../walker/walker"), SexpWalker, _;
-
-SexpWalker = Walker.clone(function () {
-  this.match('error', function (node) {
-    var childNodes = Array.prototype.slice.call(arguments, 1), self = this;
-
-    if (childNodes.length)
-      return '(<SyntaxError: ' + node.message() + '>' + childNodes.map(function (child) { return ' ' + self.walk(child); }).join('') + ')';
-    else
-      return '<SyntaxError: ' + node.message() + '>'
-  })
-
-  this.match(_, function (node) {
-    var childNodes = Array.prototype.slice.call(arguments, 1), self = this;
-    if (childNodes.length)
-      return '(' + node.value + childNodes.map(function (child) { return ' ' + self.walk(child); }).join('') + ')';
-    else
-      return node.value
-  });
-});
-
-module.exports = SexpWalker;
 });
 
 require.define("/lib/parser/symbol_table.js",function(require,module,exports,__dirname,__filename,process,global){var elf = require ( "../runtime/runtime" );
@@ -1219,9 +1385,12 @@ var SymbolTable = elf.Object.clone(function () {
 module.exports = SymbolTable;
 });
 
-require.define("/lib/language/language.js",function(require,module,exports,__dirname,__filename,process,global){var elf    = require ( "../runtime/runtime" )
-  , Parser = require ( "../parser/parser"   )
-  , Lexer  = require ( "../lexer/lexer"     )
+require.define("/lib/language/language.js",function(require,module,exports,__dirname,__filename,process,global){var elf       = require ( "../runtime/runtime" )
+  , Parser    = require ( "../parser/parser"   )
+  , ParserDSL = require ( "../parser/dsl"      )
+  , Lexer     = require ( "../lexer/lexer"     )
+  , LexerDSL  = require ( "../lexer/dsl"       )
+  , fun       = require ( "funargs"            )
   , Language
   ;
 
@@ -1230,64 +1399,51 @@ Language = elf.Object.clone(function () {
   this.init = function () {
     this.parser = Parser.clone();
     this.lexer  = Lexer.clone();
+    this.wrapParserAPI()
   };
 
-  this.rule = function (name, regex, action, arity) {
-    this.lexer.rule(name, regex, action, arity)
-  };
+  this.wrapParserAPI = function () {
+    var lexer = this.lexer;
 
-  this.name = function (regex, helper) {
-    this.lexer.name(regex, helper);
+    this.parser.wrap("advance", function (old) {
+      return function (id) {
+        if (id) lexer.operator(id);
+        return old.apply(this, arguments);
+      }
+    })
+
+    this.parser.wrap("parseUntil", function (old) {
+      return function (id, opts) {
+        lexer.operator(id);
+        if (opts && opts.step) lexer.operator(opts.step);
+        return old.apply(this, arguments);
+      }
+    })
   }
 
-  this.number = function (regex, helper) {
-    this.lexer.number(regex, helper);
-  }
+  LexerDSL.slots().forEach(function (slot) {
+    this[slot] = function () {
+      this.lexer[slot].apply(this.lexer, arguments);
+    }
+  }, this)
 
-  this.string = function (regex, helper) {
-    this.lexer.string(regex, helper);
-  }
+  ParserDSL.slots().forEach(function (slot) {
+    this[slot] = function () {
+      var args = fun(arguments);
+      var ids  = args.strings();
 
-  this.regex = function (regex, helper) {
-    this.lexer.regex(regex, helper);
-  }
+      ids.forEach(function (id) {
+        this.lexer.operator(id);
+      }, this)
 
-  this.operator = function (regex, helper) {
-    this.lexer.operator(regex, helper);
-  }
-
-  this.eol = function (regex, helper) {
-    this.lexer.eol(regex, helper);
-  }
-
-  this.skip = function (regex, helper) {
-    this.lexer.skip(regex, helper);
-  }
-
-  this.prefix = function (id, led) {
-    this.lexer.operator(id);
-    this.parser.prefix(id, led)
-  };
-
-  this.infix = function (id, bp, led) {
-    this.lexer.operator(id);
-    this.parser.infix(id, bp, led)
-  };
-
-  this.infixr = function (id, bp, led) {
-    this.lexer.operator(id);
-    this.parser.infix(id, bp, led)
-  };
-
-  this.stmt = function (id, std) {
-    this.lexer.operator(id);
-    this.parser.stmt(id, std)
-  };
+      this.parser[slot].apply(this.parser, arguments);
+    }
+  }, this);
 
   this.borrow = function (obj) {
-    var symbols = Array.prototype.slice.call(arguments, 1), self = this;
+    var symbols = Array.prototype.slice.call(arguments, 1);
 
-    symbols.forEach(function (sym) { self.lexer.operator(sym); })
+    symbols.forEach(function (sym) { this.lexer.operator(sym); }, this)
     this.parser.borrow.apply(this.parser, [obj.parser].concat(symbols));
   }
 
@@ -1327,18 +1483,31 @@ require.define("/lib/repl/repl.js",function(require,module,exports,__dirname,__f
 var REPL = elf.Object.clone(function () {
   this.extend(elf.Evented);
 
-  this.reader   = {};
-  this.in       = process.stdin;
-  this.out      = process.stdout;
-  this.colorize = function (expr  ) { return sys.inspect(expr, false, null, true); }
-  this.eval     = function (source) { return eval(source);                         }
-  this.prompt   = "> ";
+  this.reader    = {};
+  this.in        = process.stdin;
+  this.out       = process.stdout;
+  this.colorize  = function (expr  ) { return sys.inspect(expr, false, null, true); }
+  this.eval      = function (source) { return eval(source);                         }
+  this.prompt    = "> ";
+
+  this.completer = function (line) {
+    var lastWord = line.split(/\s+/).pop();
+    var completions = this.env.slots().filter(function (slot) {
+      return slot.indexOf(lastWord) === 0 && this.keywords.indexOf(slot) === -1;
+    }, this);
+
+    return [completions, lastWord];
+  };
 
   this.start = function () {
-    var rl = this.reader.createInterface(this.in, this.out);
+    var rl = this.reader.createInterface({
+      input     : this.in,
+      output    : this.out,
+      completer : this.completer.bind(this)
+    });
     rl.on('line', function (line) {
       try {
-        this.trigger('line', line)
+        this.trigger('line', line);
       } catch (error) {
         this.trigger('error', error);
       }
@@ -1353,12 +1522,16 @@ var REPL = elf.Object.clone(function () {
   };
 
   this.on('line', function (line) {
-    console.log('=>', this.colorize(this.eval(line)));
+    console.log('=>', this.colorize(this.eval(line, this.env)));
   });
 
   this.on('error', function (error) {
     console.log('SyntaxError:', error.message + '.');
   })
+
+  this.init = function () {
+    this.env = elf.Object.clone();
+  }
 });
 
 module.exports = REPL;
@@ -1888,6 +2061,73 @@ EventEmitter.prototype.listeners = function(type) {
   }
   return this._events[type];
 };
+
+});
+
+require.define("/lib/utils/error_walker.js",function(require,module,exports,__dirname,__filename,process,global){var Walker = require("../walker/walker"), ErrorWalker, _;
+
+ErrorWalker = Walker.clone(function () {
+  var errors;
+
+  this.match('error', function (env, node) {
+    var childNodes = Array.prototype.slice.call(arguments, 2);
+    this.addError(node);
+    childNodes.forEach(function (node) { this.walk(node, env) }, this)
+
+    return this;
+  })
+
+  this.match(_);
+
+  this.addError = function (errorNode) {
+    if (!errors[errorNode.line]) errors[errorNode.line] = [];
+    errors[errorNode.line].push({message: errorNode.message(), start: errorNode.start, end: errorNode.end});
+  }
+
+  this.report = function (nodeList, source) {
+    var report = ""
+      , lines  = (source || '').split(/\n+/);
+
+    errors = {};
+
+    this.walk(nodeList);
+
+    for (var line in errors) {
+      line = parseInt(line, 10);
+
+      report += "\n\nLine: " + (line + 1);
+      errors[line].forEach(function (err) {
+        report += "\n * " + err.message + " [" + err.start + ", " + err.end + "]";
+      });
+      if (source) {
+        var lines      = source.split(/\n+/);
+        var paddLine   = function (line) { return (line + 1) < 10 ? ('0' + (line + 1)) : (line + 1) };
+        var lineNum    = function (line) { return paddLine(line) + ":  "; }
+        var current    = lineNum(line) + lines[line];
+
+        report += "\n"
+        if (lines[line - 1]) report += '\n' + lineNum(line - 1) + lines[line - 1]
+        report += "\n" + current + "\n";
+
+        for (var i = 0; i < ((errors[line][0].start) + (lineNum(line).length)); i++) report += ' ';
+        errors[line].forEach(function (err, idx) {
+          var prevLen = idx ? errors[line][idx - 1].end : err.end;
+
+          for (var i = prevLen  ; i < err.start - 1; i++) report += " ";
+          for (var i = err.start; i <= err.end     ; i++) report += "^";
+        });
+        if (lines[line + 1]) report += '\n' + lineNum(line - 1) + lines[line + 1]
+      }
+    }
+    if (report) {
+      report = '\n------------- Errors -------------\n' + report + '\n\n----------------------------------\n';
+    }
+
+    return report;
+  }
+})
+
+module.exports = ErrorWalker;
 
 });
 
